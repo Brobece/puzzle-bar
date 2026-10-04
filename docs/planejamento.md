@@ -1,9 +1,9 @@
 # Puzzle Bar — planejamento e arquitetura
 
-**Versão:** 0.1 — proposta para revisão.  
-**Data:** 25/09/2026.  
-**Entrega atual:** somente documentação; nenhuma aplicação foi implementada.
-**Estado:** planejamento pausado pelo autor; arquivo salvo e pronto para retomada.
+- **Versão:** 1.0 — planejamento-base concluído.
+- **Data:** 01/10/2026.
+- **Entrega atual:** somente documentação; nenhuma aplicação foi implementada.
+- **Estado:** arquitetura do produto e especificação da E1 concluídas; pronto para revisão do autor antes da implementação.
 
 ## 1. Visão do produto
 
@@ -615,33 +615,379 @@ Expansões previsíveis: delivery precisa de endereço histórico, área/taxa e 
 
 Antes de vender, definir licenciamento, atualização, suporte, exportação, retenção e responsabilidades; revisar licenças de imagens/fontes/dependências; levantar requisitos legais, fiscais, privacidade e venda de bebidas no local de operação. São itens de levantamento, não conclusão de conformidade jurídica. Comprovante de pagamento e documento fiscal são entregas distintas.
 
-## 16. Decisões abertas
+## 16. Decisões de referência
 
-| Decisão | Proposta atual | Resolver antes de |
+Para concluir o planejamento sem bloquear o projeto, as decisões abaixo passam a ser padrões de referência. Podem mudar durante a revisão, mas uma alteração deve atualizar modelo, contratos e critérios afetados antes do código.
+
+| Decisão | Padrão de referência | Quando reavaliar |
 | --- | --- | --- |
-| País, moeda, idioma e fuso | Um de cada, configurável | Modelo físico e conteúdo público |
-| Retirada ou delivery | Retirada | E3 |
-| Conta obrigatória no site | Sim; presencial aceita avulso | E1 |
-| Duração, antecedência e tolerância | Parâmetros; exemplo 2h/15min, sem sinal | E1 |
-| Mesa escolhida pelo cliente | Sistema escolhe compatível | E1 |
-| Grupos/junção de mesas | Atendimento manual fora da reserva online inicial | E1 |
-| Métodos e provedor de pagamento | Avaliar depois dos requisitos | E3 |
-| Taxa de serviço/desconto | Configuráveis e rastreáveis | E2 |
-| Cancelamento/estorno | Antes de pagar: cliente; depois: equipe avalia | E3 |
-| Retirada imediata/agendada | Imediata no horário habilitado | E3 |
-| Profundidade do estoque | Insumos/ficha técnica em E4 | E4 |
-| Conteúdo editável pela equipe | Versionado inicialmente | Design de E1 |
-| Dispositivos, internet e impressão | Levantar; operação online | Piloto |
-| Modalidade de venda | Validar próprio pub primeiro | E5 |
+| País, idioma, moeda e fuso | Brasil, pt-BR, BRL e `America/Sao_Paulo` | Antes de publicar dados reais do pub |
+| Pedido remoto | Retirada no pub | Ao planejar E3; delivery continua fora |
+| Conta no site | Obrigatória para reservar/comprar; atendimento aceita cadastro avulso | Após observar abandono de cadastro |
+| Reserva | Duração 120 min; tolerância 15 min; antecedência mínima 2 h e máxima 60 dias | Após piloto com operação real |
+| Cancelamento de reserva | Cliente pode cancelar até 2 h antes; depois, contato com o pub | Antes de publicação |
+| Escolha de mesa | Sistema escolhe a menor mesa capaz de atender o grupo | Se a experiência exigir mapa para clientes |
+| Tamanho do grupo online | 1 até a capacidade da maior mesa ativa | Ao implementar junção automática |
+| Junção de mesas | Atendimento manual, fora do autoatendimento inicial | Com demanda comprovada |
+| Pagamento | Provedor e métodos escolhidos na preparação da E3 | Antes de integrar E3 |
+| Taxa de serviço | Desabilitada por padrão; configurável e discriminada | Antes de E2 em produção |
+| Retirada | Imediata durante faixa habilitada | Ao avaliar agendamento |
+| Estoque | Disponibilidade manual em E1–E3; ficha técnica automática em E4 | Ao iniciar E4 |
+| Conteúdo institucional | Versionado no front-end | Se equipe precisar editar sem deploy |
+| Operação | Online; sem garantia offline e sem impressão obrigatória | Antes do piloto no salão |
+| Comercialização | Validar no próprio pub antes de multitenancy | Ao chegar à E5 |
 
-**Próxima etapa recomendada:** revisar decisões de E1 e detalhar seu modelo físico, contratos e wireframes antes de iniciar código. Este é o documento único de referência inicial e deve evoluir com as decisões do projeto.
+## 17. Especificação executável da E1
 
-### Ponto de retomada
+Esta seção transforma site, cardápio e reservas em um recorte pronto para virar backlog. Ela não contém código nem substitui as decisões operacionais que o responsável pelo pub deve validar.
 
-Na próxima sessão, começar pelas decisões que alteram diretamente a E1: país/moeda/fuso, regras de duração e tolerância das reservas, antecedência mínima/máxima, escolha automática de mesa e cadastro obrigatório do cliente. Em seguida:
+### 17.1 Objetivo, fronteira e atores
 
-1. Fechar os critérios de aceite da E1.
-2. Transformar o modelo lógico da E1 em modelo físico, ainda como documentação.
-3. Desenhar wireframes das telas P01–P08, A01–A05, C01–C04, O01–O03 e G02–G07/G16.
-4. Documentar os contratos da API da E1.
-5. Somente depois disso decidir se a implementação pode começar.
+Ao terminar E1, um visitante conhece o pub e o cardápio; um cliente cria conta, confirma seu e-mail, consulta disponibilidade, reserva e cancela dentro da regra; atendimento cria reservas avulsas, registra chegada/ausência e consulta agenda; gerente mantém produtos, categorias, horários, ambientes, mesas, equipe e parâmetros.
+
+E1 termina no check-in. Abertura de comanda, pedido, preparação e pagamento pertencem às entregas seguintes. O check-in da E1 apenas muda o estado da reserva; quando E2 existir, também poderá abrir a comanda.
+
+### 17.2 Configuração inicial de reservas
+
+| Parâmetro | Valor padrão | Validação |
+| --- | --- | --- |
+| `reservation_duration_minutes` | 120 | Entre 30 e 360; múltiplo de 15 |
+| `reservation_tolerance_minutes` | 15 | Entre 0 e 60 |
+| `reservation_min_notice_minutes` | 120 | Zero ou positivo |
+| `reservation_max_advance_days` | 60 | Entre 1 e 365 |
+| `reservation_cancel_notice_minutes` | 120 | Zero ou positivo |
+| `reservation_slot_minutes` | 30 | Um entre 15, 30 ou 60 |
+| `default_locale` | `pt-BR` | Valor suportado pela aplicação |
+| `timezone` | `America/Sao_Paulo` | Identificador IANA válido |
+| `currency` | `BRL` | Código ISO 4217 suportado |
+
+Disponibilidade gera horários discretos dentro do funcionamento do salão. Uma opção só é oferecida quando o intervalo inteiro cabe na faixa aberta, existe mesa ativa com capacidade suficiente e não há alocação ativa sobreposta. Entre mesas possíveis, escolher a menor capacidade e desempatar pelo código estável. Isso reduz desperdício de mesas grandes e deixa o resultado determinístico.
+
+Consulta de disponibilidade é apenas informativa. A confirmação repete todas as verificações em transação. O horário aceito é armazenado como instante; regras semanais e exceções são interpretadas no fuso do pub.
+
+### 17.3 Modelo físico proposto para E1
+
+Nomes físicos usam `snake_case`; entidades Java podem usar nomes em inglês ou português, mas o projeto deve escolher um idioma e manter consistência. Abaixo, `uuid` indica PK gerada pela aplicação; `timestamptz` representa instante; campos `created_at` e `updated_at` aparecem nos cadastros mutáveis.
+
+#### Identidade
+
+| Tabela | Colunas essenciais | Restrições e índices |
+| --- | --- | --- |
+| `users` | `id uuid`, `name varchar(120)`, `email varchar(254)`, `email_normalized varchar(254)`, `phone varchar(32) null`, `password_hash varchar(255)`, `status varchar(20)`, `email_verified_at timestamptz null`, timestamps, `version bigint` | PK; UNIQUE `email_normalized`; CHECK de status; índice por status |
+| `user_roles` | `user_id uuid`, `role varchar(30)`, `created_at timestamptz` | PK composta; FK para users; CHECK de papel |
+| `access_tokens` | `id uuid`, `user_id uuid`, `purpose varchar(30)`, `token_hash varchar(255)`, `expires_at timestamptz`, `consumed_at timestamptz null`, `created_at timestamptz` | PK; FK; UNIQUE `token_hash`; índice usuário/finalidade/expiração |
+
+Não guardar token puro. Ao redefinir senha, consumir o token atomicamente e invalidar as demais sessões conforme política adotada. Contas de equipe são criadas/convidadas por usuário autorizado; cadastro público sempre nasce apenas com papel CLIENT.
+
+#### Estabelecimento e agenda
+
+| Tabela | Colunas essenciais | Restrições e índices |
+| --- | --- | --- |
+| `establishments` | `id uuid`, `name varchar(120)`, `slug varchar(80)`, contatos, endereço estruturado, `timezone varchar(64)`, `currency char(3)`, `locale varchar(10)`, parâmetros de reserva, timestamps, `version bigint` | PK; UNIQUE slug; checks dos parâmetros |
+| `business_hours` | `id uuid`, `establishment_id uuid`, `weekday smallint`, `channel varchar(20)`, `opens_at time`, `closes_at time`, `ends_next_day boolean`, `active boolean` | FK; CHECK dia 1–7 e intervalo não vazio; índice estabelecimento/dia/canal |
+| `business_hour_exceptions` | `id uuid`, `establishment_id uuid`, `local_date date`, `channel varchar(20)`, `closed boolean`, `opens_at time null`, `closes_at time null`, `ends_next_day boolean`, `reason varchar(200) null` | FK; UNIQUE estabelecimento/data/canal/faixa; CHECK fechado versus horários |
+| `areas` | `id uuid`, `establishment_id uuid`, `name varchar(80)`, `display_order integer`, `active boolean`, timestamps | FK; UNIQUE estabelecimento/nome; ordem não negativa |
+| `tables` | `id uuid`, `area_id uuid`, `code varchar(30)`, `capacity smallint`, `active boolean`, timestamps, `version bigint` | FK; capacidade positiva; UNIQUE por área/código; índice área/ativa/capacidade |
+| `table_allocations` | `id uuid`, `table_id uuid`, `starts_at timestamptz`, `ends_at timestamptz`, `type varchar(20)`, `active boolean`, `reason varchar(240) null`, timestamps | FK; fim maior que início; índice mesa/início/fim; exclusão de sobreposição ativa |
+| `reservations` | `id uuid`, `allocation_id uuid`, `customer_id uuid null`, `contact_name varchar(120)`, `contact_phone varchar(32)`, `party_size smallint`, `status varchar(24)`, `confirmation_code varchar(20)`, `notes varchar(500) null`, `policy_version varchar(30)`, `created_by uuid`, `cancelled_at timestamptz null`, `cancellation_reason varchar(240) null`, timestamps, `version bigint` | FKs; UNIQUE alocação e código; pessoas positivas; índices cliente/criação e status/início via consulta com alocação |
+
+O código da mesa deve ser único em todo o estabelecimento na regra da aplicação; como a tabela referencia ambiente, isso pode ser reforçado incluindo `establishment_id` diretamente com FK composta ou com validação transacional. Na versão física final, preferir a estrutura que permita a constraint direta e consultas operacionais simples.
+
+PostgreSQL deverá habilitar `btree_gist` se a constraint proposta exigir igualdade de UUID no GiST. A migration deve criar uma exclusão equivalente a: mesma `table_id` não pode possuir `tstzrange(starts_at, ends_at, '[)')` sobreposto quando `active = true`. Cancelar desativa a alocação dentro da mesma transação que muda a reserva.
+
+#### Cardápio e comunicação
+
+| Tabela | Colunas essenciais | Restrições e índices |
+| --- | --- | --- |
+| `categories` | `id uuid`, `establishment_id uuid`, `name varchar(80)`, `slug varchar(80)`, `display_order integer`, `active boolean`, timestamps | FK; UNIQUE estabelecimento/slug e estabelecimento/nome; ordem não negativa |
+| `products` | `id uuid`, `category_id uuid`, `name varchar(120)`, `slug varchar(100)`, `description varchar(1200)`, `price numeric(12,2)`, `preparation_station varchar(24)`, `active boolean`, `available boolean`, `alcoholic boolean`, timestamps, `version bigint` | FK; preço não negativo; UNIQUE categoria/slug; índices categoria/ativo/ordenação |
+| `product_images` | `id uuid`, `product_id uuid`, `storage_key varchar(500)`, `alt_text varchar(240)`, `display_order integer` | FK; UNIQUE produto/ordem e produto/chave |
+| `allergens` | `id uuid`, `name varchar(80)`, `code varchar(40)` | UNIQUE nome normalizado e code |
+| `product_allergens` | `product_id uuid`, `allergen_id uuid`, `notice_type varchar(20)` | PK composta incluindo tipo; FKs; CHECK tipo |
+| `notifications` | `id uuid`, `type varchar(40)`, `recipient varchar(254)`, `business_reference_type varchar(40)`, `business_reference_id uuid`, `status varchar(20)`, `attempt_count integer`, `next_attempt_at timestamptz`, `last_error_code varchar(80) null`, timestamps | Tentativas não negativas; índices estado/próxima tentativa e referência |
+| `audit_events` | `id uuid`, `actor_id uuid null`, `action varchar(80)`, `resource_type varchar(60)`, `resource_id uuid null`, `result varchar(20)`, `reason varchar(240) null`, `request_id varchar(80)`, `occurred_at timestamptz`, `metadata jsonb` | Índices instante, ator e recurso; metadata sem segredos/dados excessivos |
+
+Imagens ficam em armazenamento de objetos; banco guarda chave estável. Exclusão de categoria com produtos é bloqueada; preferir inativação. Produto usado futuramente em venda nunca será removido fisicamente por fluxo comum.
+
+### 17.4 Transações da E1
+
+| Caso de uso | Limite transacional | Resultado |
+| --- | --- | --- |
+| Confirmar reserva | Recarregar configuração e mesa candidata; inserir alocação; inserir reserva; registrar auditoria/solicitação de notificação | Commit único; constraint decide disputa real |
+| Cancelar reserva | Bloquear reserva; validar proprietário/prazo; mudar status; desativar alocação; registrar auditoria/notificação | Horário liberado junto com cancelamento |
+| Remarcar | Validar novo intervalo; criar/substituir alocação com proteção contra sobreposição; atualizar reserva e auditoria | Nunca fica com dois horários ativos |
+| Check-in | Bloquear reserva; validar estado/tolerância; mudar para CHECK_IN; registrar ator/instante | Repetição idempotente retorna estado atual |
+| Não comparecimento | Bloquear reserva; validar autorização e horário; mudar status; desativar alocação; auditar | Mesa liberada conscientemente |
+| Alterar capacidade/inativar mesa | Verificar reservas futuras em transação | Bloquear alteração ou exigir realocação/cancelamento explícito |
+
+Envio de e-mail não participa da transação de negócio. A transação grava a solicitação; um processador envia depois. Falha de e-mail não desfaz reserva confirmada.
+
+## 18. Contratos detalhados da E1
+
+### 18.1 Envelope de erro
+
+```json
+{
+  "type": "https://puzzlebar.example/problems/reservation-conflict",
+  "title": "Horário indisponível",
+  "status": 409,
+  "detail": "A mesa foi reservada enquanto você confirmava.",
+  "instance": "/api/v1/reservations",
+  "code": "RESERVATION_SLOT_UNAVAILABLE",
+  "requestId": "01J...",
+  "fieldErrors": []
+}
+```
+
+Adotar `application/problem+json`. `detail` é seguro para o usuário; logs internos correlacionam pelo `requestId`. Erros de validação incluem `fieldErrors` com `field`, `code` e `message`. Nunca retornar stack trace ou existência de e-mail na recuperação de senha.
+
+### 18.2 Autenticação
+
+| Operação | Entrada essencial | Saída/sucesso | Erros relevantes |
+| --- | --- | --- | --- |
+| `POST /auth/register` | nome, e-mail, telefone opcional, senha | `201`; ID e estado de verificação | `400` validação; resposta de conflito sem expor detalhes desnecessários |
+| `POST /auth/login` | e-mail, senha | `204`; cookie de sessão | `401` credenciais genéricas; `429` limite |
+| `POST /auth/logout` | CSRF + sessão | `204`; sessão invalidada | Operação idempotente |
+| `GET /auth/me` | sessão | usuário, papéis e permissões derivadas | `401` |
+| `POST /auth/password-reset-requests` | e-mail | `202` sempre | `429` limite |
+| `POST /auth/password-resets` | token e nova senha | `204` | `400` token inválido/expirado com mensagem genérica |
+| `POST /auth/email-verifications` | token | `204` | Token inválido/expirado |
+
+Requisitos de senha devem ser claros e compatíveis com o algoritmo; permitir gerenciadores de senha e colagem. Não impor trocas periódicas sem evidência de comprometimento. Definir limite de tamanho para evitar abuso do hash.
+
+### 18.3 Consulta e confirmação de reserva
+
+`GET /api/v1/reservation-availability?date=2026-10-10&partySize=4`
+
+```json
+{
+  "date": "2026-10-10",
+  "partySize": 4,
+  "timezone": "America/Sao_Paulo",
+  "durationMinutes": 120,
+  "slots": [
+    { "startsAt": "2026-10-10T19:00:00-03:00", "available": true },
+    { "startsAt": "2026-10-10T19:30:00-03:00", "available": true }
+  ]
+}
+```
+
+A resposta pública não expõe mesa, capacidade restante exata ou dados de outras reservas. Datas fora da janela retornam validação; dia fechado retorna lista vazia com motivo público opcional.
+
+`POST /api/v1/reservations`
+
+```json
+{
+  "startsAt": "2026-10-10T19:00:00-03:00",
+  "partySize": 4,
+  "contactName": "Cliente Exemplo",
+  "contactPhone": "+5511999999999",
+  "notes": "Preferência por local acessível.",
+  "acceptedPolicyVersion": "reservation-policy-v1"
+}
+```
+
+Sucesso `201 Created`, com `Location: /api/v1/reservations/{id}`:
+
+```json
+{
+  "id": "uuid",
+  "confirmationCode": "PB7K2M",
+  "status": "CONFIRMED",
+  "startsAt": "2026-10-10T19:00:00-03:00",
+  "endsAt": "2026-10-10T21:00:00-03:00",
+  "partySize": 4,
+  "areaName": "Salão principal",
+  "canCancel": true,
+  "cancelUntil": "2026-10-10T17:00:00-03:00"
+}
+```
+
+Não revelar código interno da mesa ao cliente antes da chegada, salvo decisão operacional posterior. Conflito concorrente retorna `409 RESERVATION_SLOT_UNAVAILABLE`. Política desatualizada retorna `409 POLICY_VERSION_CHANGED` com orientação para revisar.
+
+### 18.4 Comandos de reserva
+
+| Comando | Autorização | Regra | Resposta |
+| --- | --- | --- | --- |
+| `POST /reservations/{id}/cancel` | Cliente proprietário ou equipe | Cliente respeita prazo; equipe informa motivo | `200` com reserva cancelada; repetição segura |
+| `POST /reservations/{id}/reschedule` | Proprietário ou equipe | Revalida política e disponibilidade | `200`; `409` se indisponível |
+| `POST /reservations/{id}/check-in` | Atendimento+ | Apenas confirmada; registra ator/instante | `200`; repetição não duplica ação |
+| `POST /reservations/{id}/no-show` | Atendimento+ | Após início+tolerância; motivo opcional | `200` |
+
+Comandos recebem `If-Match`/versão ou campo de versão quando útil para detectar tela desatualizada. Idempotência semântica significa que repetir o mesmo cancelamento/check-in devolve o estado alcançado; tentativa incompatível retorna `409 INVALID_RESERVATION_STATE`.
+
+### 18.5 Administração E1
+
+CRUD administrativo não é genérico: criação/edição usam DTOs próprios, deleção comum vira inativação e mudanças perigosas verificam dependências.
+
+| Recurso | Consultas/comandos essenciais |
+| --- | --- |
+| Categorias | Listar, criar, editar, reordenar, ativar/inativar |
+| Produtos | Paginar/filtrar, criar, editar, disponibilizar/indisponibilizar, ativar/inativar, imagens e alergênicos |
+| Ambientes/mesas | Listar mapa, criar/editar ambiente, criar/editar mesa, bloquear intervalo, ativar/inativar |
+| Horários | Consultar semana/canal, substituir configuração semanal, criar/editar exceção |
+| Reservas | Agenda paginada por intervalo/estado, criar avulsa, consultar, remarcar, cancelar, check-in e ausência |
+| Equipe | Listar, convidar/criar, alterar papéis permitidos, inativar e encerrar sessões |
+| Configuração | Consultar/editar dados públicos e parâmetros de reserva com versionamento otimista |
+
+Listagens retornam metadados `page`, `size`, `totalElements` e `totalPages`; `size` máximo inicial de 100. Agenda pode usar cursor posteriormente se volume justificar.
+
+## 19. Wireframes funcionais da E1
+
+Wireframes abaixo definem hierarquia e ações, não aparência final. Componentes se adaptam a telas menores.
+
+### 19.1 Site e cardápio
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ PUZZLE BAR        Cardápio  Sobre  Visite      [Reservar]   │
+├──────────────────────────────────────────────────────────────┤
+│ Londres encontra a tradição alemã                           │
+│ Texto curto de proposta                    [Reservar mesa]   │
+│                                             [Ver cardápio]   │
+├──────────────────────────────────────────────────────────────┤
+│ Destaques do cardápio: [foto/nome/preço] [foto/nome/preço]  │
+├──────────────────────────────────────────────────────────────┤
+│ Ambiente • horários de hoje • endereço • contato             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+No cardápio, cabeçalho simples, busca opcional, navegação por categorias, cartões com nome/preço/estado e detalhe acessível. Produtos indisponíveis permanecem visíveis com rótulo quando isso ajudar o cliente; produtos inativos não aparecem.
+
+### 19.2 Reserva do cliente
+
+```text
+┌──────────────────────────────────────────────┐
+│ Reservar mesa                 Etapa 1 de 3   │
+│ Pessoas [ -  4  + ]                         │
+│ Data    [ 10/10/2026 ]                      │
+│ Horários: [18:30] [19:00] [19:30] [20:00]  │
+│                              [Continuar]     │
+├──────────────────────────────────────────────┤
+│ Etapa 2: entrar/criar conta, se necessário   │
+├──────────────────────────────────────────────┤
+│ Etapa 3: contato, observação, política        │
+│ [ ] Li e aceito a política v1                │
+│                  [Confirmar reserva]         │
+└──────────────────────────────────────────────┘
+```
+
+Após confirmação, mostrar código, data/hora, número de pessoas, área, política e ação de cancelar. Em conflito, preservar dados e recarregar horários. Campo observação não promete atendimento de solicitação; mostrar isso com linguagem amigável.
+
+### 19.3 Agenda operacional
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ Agenda  [Hoje] [◀] 10/10/2026 [▶]  Estado [Todos] [+ Reserva]   │
+├────────┬──────────────┬─────────┬─────────┬───────────┬──────────┤
+│ 18:30  │ Ana, 2       │ Mesa 04 │ Confirm.│ PB82KM    │ [Abrir]  │
+│ 19:00  │ Bruno, 4     │ Mesa 08 │ Atraso  │ PB7K2M    │ [Abrir]  │
+├────────┴──────────────┴─────────┴─────────┴───────────┴──────────┤
+│ Detalhe lateral: contato, pessoas, notas, histórico              │
+│ [Check-in] [Remarcar] [Cancelar] [Não compareceu]                │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Em celular, lista e detalhe viram telas empilhadas. Dados pessoais aparecem apenas a quem precisa atendê-los. “Atraso” é apresentação calculada; estado só muda para ausência por comando autorizado.
+
+### 19.4 Gestão de mesas e horários
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Ambientes e mesas                         [+ Ambiente]       │
+│ Salão principal [Editar]                                     │
+│ [M01 • 2 ativa] [M02 • 4 ativa] [M03 • 6 inativa] [+ Mesa]  │
+│ Seleção: código [M02] capacidade [4] estado [Ativa]          │
+│ Reservas futuras: 3             [Salvar] [Bloquear horário]  │
+├──────────────────────────────────────────────────────────────┤
+│ Funcionamento • SALÃO                                        │
+│ Seg [fechado]  Ter [18:00–00:00] ... Dom [12:00–22:00]       │
+│ Exceções: 25/12 Fechado                        [+ Exceção]    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Alterar capacidade/inativar exibe reservas futuras afetadas antes de confirmar. Editor de horários deve representar claramente encerramento no dia seguinte.
+
+### 19.5 Gestão de produto
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Produtos  [Buscar] [Categoria] [Estado]       [+ Produto]    │
+├──────────────────────────────────────────────────────────────┤
+│ Nome • Categoria • Preço • Disponível • Ativo • [Editar]     │
+├──────────────────────────────────────────────────────────────┤
+│ Editor: nome, slug, descrição, preço, categoria, setor        │
+│ [ ] alcoólico  [ ] disponível  [ ] ativo                     │
+│ Imagens + texto alternativo • alergênicos                    │
+│                                      [Cancelar] [Salvar]      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Disponível é uma pausa operacional; ativo controla publicação permanente. A interface explica a diferença. Alteração de preço futura será auditada e não afetará pedidos históricos.
+
+## 20. Critérios de aceite da E1
+
+### 20.1 Visitante e cliente
+
+- Site funciona em celular e desktop, apresenta identidade, horário, localização e caminhos claros para cardápio/reserva.
+- Cardápio exibe somente categorias/produtos ativos e distingue indisponível; preço usa BRL/pt-BR.
+- Cadastro valida campos, cria apenas CLIENT e solicita verificação sem expor senha/token.
+- Login cria sessão segura; logout invalida; recuperação não revela se o e-mail existe.
+- Cliente encontra horários apenas dentro das regras e não descobre ocupação detalhada do salão.
+- Reserva confirmada aparece imediatamente mesmo se e-mail falhar.
+- Duas confirmações concorrentes para a última mesa geram apenas uma alocação.
+- Cliente lista/consulta apenas suas reservas e cancela dentro do prazo.
+- Sessão expirada durante confirmação preserva a intenção e conduz ao login com retorno seguro.
+
+### 20.2 Operação e gestão
+
+- Atendimento consulta agenda por dia/estado, cria reserva avulsa e executa check-in, ausência, cancelamento e remarcação autorizados.
+- Remarcação concorrente não cria sobreposição nem perde a reserva anterior em falha.
+- Gerente mantém cardápio, horários, exceções, ambientes e mesas sem acesso direto ao banco.
+- Inativação/capacidade de mesa não deixa reservas futuras silenciosamente inválidas.
+- Funcionário sem papel adequado recebe `403`, ainda que chame a API diretamente.
+- Mudança de papéis não permite autoelevação nem remove o último proprietário.
+- Ações críticas geram auditoria consultável com autor, instante, alvo e resultado.
+- Dados pessoais, hashes e tokens não aparecem em logs ou respostas indevidas.
+
+### 20.3 Qualidade técnica
+
+- Repositório inicia ambiente local de forma documentada e repetível quando a implementação começar.
+- Migrations criam banco vazio e executam atualização a partir da versão anterior.
+- Testes de integração usam PostgreSQL e verificam constraint de sobreposição e transações críticas.
+- Contrato OpenAPI descreve rotas, segurança, exemplos e erros da E1.
+- CI compila front/back, executa análises e testes, e bloqueia integração em falha.
+- Acessibilidade cobre teclado, foco, rótulos, mensagens associadas, contraste e semântica nas jornadas críticas.
+- Datas são testadas em virada de dia e mudanças relevantes de offset do fuso configurado.
+
+## 21. Backlog ordenado da E1
+
+| Ordem | Épico | Entrega interna |
+| --- | --- | --- |
+| 1 | Fundação | Estrutura dos projetos, configuração local, CI inicial e convenções |
+| 2 | Banco | Flyway, tabelas-base, seeds locais mínimos e testes de migrations |
+| 3 | Catálogo administrativo | Categorias/produtos/imagens/alergênicos e permissões gerenciais |
+| 4 | Site público | Layout, início, sobre, visite e cardápio responsivo |
+| 5 | Identidade | Cadastro, verificação, login/logout, recuperação, sessão e papéis |
+| 6 | Estabelecimento | Configurações, horários, exceções, ambientes e mesas |
+| 7 | Disponibilidade | Cálculo de slots, escolha de mesa e testes de borda |
+| 8 | Reserva do cliente | Jornada completa, conflito concorrente, consulta e cancelamento |
+| 9 | Operação | Agenda, reserva avulsa, remarcação, check-in e ausência |
+| 10 | Notificações/auditoria | Processamento durável, retentativas, consulta e retenção |
+| 11 | Endurecimento | Segurança, acessibilidade, observabilidade, carga e restauração |
+| 12 | Piloto E1 | Dados reais controlados, treinamento, métricas e correções |
+
+Cada item vira histórias menores antes do código. Uma história está pronta quando possui regra, telas/estados, contrato, dados, autorização e critérios de aceite. Está concluída quando implementação, testes, documentação e observabilidade proporcionais passam em CI e a jornada é demonstrável.
+
+## 22. Checklist antes de programar
+
+O planejamento-base está concluído. A revisão humana final deve confirmar apenas fatos que a arquitetura não pode decidir sozinha:
+
+- endereço, contatos, horários reais, capacidade/identificação das mesas e acessibilidade oferecida;
+- nome final, marca, textos, fotografias e direito de uso dos materiais;
+- cardápio inicial, preços, disponibilidade, bebidas alcoólicas e informações de alergênicos verificadas;
+- política pública de reserva/cancelamento e canal para solicitações de privacidade;
+- responsáveis que receberão papéis de proprietário/gerente no piloto;
+- infraestrutura e dispositivos disponíveis no pub.
+
+Com esses dados confirmados, o próximo trabalho é converter o backlog da E1 em tarefas e iniciar a fundação. Mudanças futuras devem atualizar primeiro este documento quando afetarem regras, dados, contratos ou segurança.
