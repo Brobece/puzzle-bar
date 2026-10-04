@@ -1,7 +1,7 @@
 # Puzzle Bar — planejamento e arquitetura
 
-- **Versão:** 1.0 — planejamento-base concluído.
-- **Data:** 01/10/2026.
+- **Versão:** 1.1 — MySQL adotado como banco oficial.
+- **Data:** 04/10/2026.
 - **Entrega atual:** somente documentação; nenhuma aplicação foi implementada.
 - **Estado:** arquitetura do produto e especificação da E1 concluídas; pronto para revisão do autor antes da implementação.
 
@@ -14,7 +14,7 @@ O objetivo educacional é aprender uma aplicação web de ponta a ponta, aprofun
 ### 1.1 Confirmado pelo autor
 
 - Front-end em Next.js e back-end em Spring Boot.
-- Banco em escolha entre PostgreSQL e MySQL.
+- Banco definido como MySQL com mecanismo InnoDB.
 - Reservas, pedidos online e pagamentos fazem parte do produto.
 - Identidade londrina e alemã; possibilidade de comercialização futura.
 - Planejar antes de programar; neste momento, criar apenas um documento.
@@ -26,7 +26,7 @@ Estas escolhas tornam o plano concreto, mas ainda podem ser revistas pelo autor.
 | Tema | Proposta inicial | Consequência |
 | --- | --- | --- |
 | Operação | Um pub | Sem estrutura de SaaS inicialmente |
-| Banco | PostgreSQL | Estudo de SQL, integridade e concorrência |
+| Banco | MySQL 8.4 LTS com InnoDB | Estudo de SQL, integridade, bloqueios e concorrência |
 | Pedido online | Retirada no pub | Delivery fica para evolução |
 | Pedido presencial | Equipe registra em comanda de mesa | Autopedido por QR Code posterior |
 | Cliente no site | Conta necessária para reservar/comprar | Histórico e autorização por proprietário |
@@ -132,7 +132,7 @@ flowchart LR
     G --> N[Next.js: interface]
     G --> S[Spring Boot: API]
     N -->|Consulta na renderizacao do servidor| S
-    S --> P[(PostgreSQL)]
+    S --> P[(MySQL / InnoDB)]
     S --> X[Provedor de pagamento]
     X -->|Webhook autenticado| S
     S --> E[Provedor de e-mail]
@@ -145,7 +145,7 @@ Next.js apresenta e interage. Spring concentra autenticação, autorização, re
 
 ### 5.2 Monólito modular
 
-Uma aplicação Spring implantável, organizada por negócio, e um PostgreSQL. Proposta adequada ao desenvolvimento individual, ao estudo de transações e a uma implantação com poucas peças.
+Uma aplicação Spring implantável, organizada por negócio, e um MySQL com InnoDB. Proposta adequada ao desenvolvimento individual, ao estudo de transações e a uma implantação com poucas peças.
 
 | Módulo | Responsabilidade |
 | --- | --- |
@@ -173,7 +173,7 @@ Dentro de cada módulo: controllers para HTTP, DTOs para contratos, serviços de
 | API | Spring Boot + Java | Stack escolhida e estudo do ecossistema |
 | Segurança | Spring Security | Sessões e autorização |
 | Persistência | Spring Data JPA e SQL explícito quando necessário | Produtividade com entendimento do SQL |
-| Banco/migrations | PostgreSQL + Flyway | Integridade e evolução reproduzível |
+| Banco/migrations | MySQL 8.4 LTS com InnoDB + Flyway | Integridade e evolução reproduzível |
 | Contratos | OpenAPI | Documentação verificável |
 | Ambiente local | Docker Compose | Dependências reproduzíveis |
 | Testes | JUnit, Spring Boot Test, Testcontainers e Playwright | Regras, integração e jornadas |
@@ -185,22 +185,22 @@ Redis, Kafka, Kubernetes, Elasticsearch e microsserviços dependem de necessidad
 
 ## 6. Banco de dados
 
-### 6.1 Recomendação e convenções
+### 6.1 Escolha e convenções
 
-**Recomendo PostgreSQL.** MySQL com InnoDB também atende ao projeto. Um diferencial útil neste domínio é explorar intervalos e constraints de exclusão para impedir reservas sobrepostas. A documentação demonstra esse padrão para recursos reserváveis. [PostgreSQL: intervalos](https://www.postgresql.org/docs/current/rangetypes.html), [MySQL: InnoDB](https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html).
+**Banco definido: MySQL 8.4 LTS, usando InnoDB em todas as tabelas de negócio.** InnoDB oferece transações, bloqueios por linha, chaves estrangeiras e recuperação após falha. Como intervalos de tempo sobrepostos não possuem uma constraint nativa direta, as reservas serão protegidas por slots atômicos com unicidade no banco e bloqueios transacionais. Referências: [InnoDB](https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html), [modelo transacional](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html) e [leituras com bloqueio](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html).
 
-- UUID como proposta de ID; identificadores não substituem autorização.
+- UUID como identificador externo, armazenado como `BINARY(16)` para índices compactos; a aplicação converte entre texto canônico e bytes. Identificadores não substituem autorização.
 - PK identifica linha; FK referencia tabela; UNIQUE impede repetição; CHECK restringe valores.
-- Instantes com semântica de fuso; apresentação no fuso do pub. Definir data comercial para turnos após meia-noite.
-- Dinheiro decimal exato/BigDecimal, moeda e arredondamento explícitos. `numeric(12,2)` é proposta para moeda de duas casas; confirmar moeda/limites antes do DDL. Insumos podem exigir mais precisão.
+- Instantes em UTC como `DATETIME(6)`; apresentação no fuso do pub. O pool de conexões e Hibernate devem operar em UTC. Definir data comercial para turnos após meia-noite.
+- Dinheiro decimal exato/BigDecimal, moeda e arredondamento explícitos. `DECIMAL(12,2)` é a proposta para moeda de duas casas; confirmar moeda/limites antes do DDL. Insumos podem exigir mais precisão.
 - Quantidade vendida em unidades inteiras no MVP; volumes distintos são produtos/variantes com receitas próprias.
 - Cadastros mutáveis recebem criação/atualização e versão quando necessário à concorrência.
 - Preservar nome, preço e adicionais históricos de vendas.
 - Preservar transações e devoluções; inativar produtos referenciados. Dados pessoais têm retenção própria.
-- Flyway altera esquema; Hibernate valida nos ambientes implantados, sem alteração automática.
+- Todas as tabelas de negócio usam `ENGINE=InnoDB`, `utf8mb4` e uma collation Unicode definida pelo projeto. Flyway altera o esquema; Hibernate valida nos ambientes implantados, sem alteração automática.
 - Estudar SQL, índices e planos de execução mesmo com JPA.
 
-Referências: [constraints](https://www.postgresql.org/docs/current/ddl-constraints.html) e [tipos numéricos](https://www.postgresql.org/docs/current/datatype-numeric.html).
+MySQL 8.4 aplica `CHECK`, `UNIQUE`, PK e FK; a aplicação continua validando para produzir mensagens melhores, enquanto o banco protege a integridade final. Valores monetários usam `DECIMAL`, nunca `FLOAT`/`DOUBLE`. Referências: [constraints e dados inválidos](https://dev.mysql.com/doc/refman/8.0/en/constraint-invalid-data.html) e [tipos de ponto fixo](https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html).
 
 O inventário abaixo é um modelo lógico. Tamanhos, nulabilidade completa e DDL serão refinados antes de cada implementação. E1–E4 identificam a entrega que exige a entidade.
 
@@ -238,6 +238,7 @@ Origem de pratos/bebidas pode começar como texto editorial. Não inferir alerg�
 | Entidade | Campos principais | Regra/finalidade | Entrega |
 | --- | --- | --- | --- |
 | alocacao_mesa | id, mesa_id FK, inicio, fim, tipo, ativa, motivo | Agenda de reserva, entrada sem reserva e bloqueio manual | E1 |
+| slot_alocacao_mesa | alocacao_id FK, mesa_id FK, inicio_slot | Células de 15 minutos; unicidade por mesa/horário impede sobreposição ativa | E1 |
 | reserva | id, alocacao_mesa_id FK único, cliente_id FK opcional, nome_contato, telefone_contato, pessoas, status, codigo, observacao, politica_versao | Site exige cliente; equipe aceita avulso; código único | E1 |
 | comanda | id, alocacao_mesa_id FK único, cliente_id FK opcional, aberta_por FK, status, aberta_em, fechada_em, versao | Uma visita por alocação; uma comanda ativa por mesa | E2 |
 
@@ -314,6 +315,7 @@ erDiagram
     ESTABELECIMENTO ||--o{ AMBIENTE : possui
     AMBIENTE ||--o{ MESA : contem
     MESA ||--o{ ALOCACAO_MESA : agenda
+    ALOCACAO_MESA ||--|{ SLOT_ALOCACAO_MESA : ocupa
     ALOCACAO_MESA ||--o| RESERVA : origina
     ALOCACAO_MESA ||--o| COMANDA : recebe
     USUARIO o|--o{ RESERVA : solicita
@@ -340,7 +342,7 @@ erDiagram
 | Regra | Mecanismo proposto |
 | --- | --- |
 | E-mail não repetido | UNIQUE no e-mail normalizado |
-| Não sobrepor reserva/bloqueio | Exclusão por mesa e `tstzrange` nas alocações ativas; avaliar extensão btree_gist |
+| Não sobrepor reserva/bloqueio | Uma linha por célula de 15 minutos em `slot_alocacao_mesa`, com UNIQUE `(mesa_id, inicio_slot)`; criação/remoção junto da alocação na mesma transação |
 | Intervalo válido | Fim maior que início; início inclusivo e fim exclusivo |
 | Capacidade respeitada | Serviço transacional valida mesa; alteração de capacidade revisa reservas futuras |
 | Uma comanda ativa por mesa | Abertura serializa na linha da mesa e verifica comandas ativas |
@@ -351,7 +353,7 @@ erDiagram
 | Operação repetida | Chave idempotente com escopo e hash do conteúdo |
 | Consultas operacionais | Índices status/data, mesa/período e cliente/data conforme consultas |
 
-Checks simples não resolvem regras entre várias linhas. Testar concorrência. Confirmar suporte à extensão necessária no ambiente escolhido. Agenda sem sobreposição não substitui verificação de ocupação real por comanda aberta.
+Checks simples não resolvem regras entre várias linhas. Testar concorrência, bloqueios e deadlocks reais no InnoDB. Todas as rotinas devem bloquear recursos na mesma ordem e repetir transações escolhidas quando houver deadlock transitório. A unicidade dos slots protege a agenda mesmo sob concorrência; ainda é necessário verificar ocupação real por comanda aberta.
 
 ## 7. Estados e consistência
 
@@ -547,7 +549,7 @@ Referências ilustrativas: [webhooks](https://docs.stripe.com/webhooks) e [idemp
 | E4: cancelamento após preparo | Sem reposição automática de insumo consumido |
 | Backup restaurado em ambiente isolado | Cadastros/transações consultáveis e reconciliáveis |
 
-Testes unitários cobrem regras/cálculos; integração com PostgreSQL real cobre migrations, constraints, consultas e concorrência. Segurança testa papéis/propriedade. Testes de ponta a ponta cobrem reserva, visita e compra/retirada. Sandbox/simulações controladas cobrem falhas de provedor.
+Testes unitários cobrem regras/cálculos; integração com MySQL 8.4 real em Testcontainers cobre migrations, constraints, bloqueios, consultas, deadlocks e concorrência. Segurança testa papéis/propriedade. Testes de ponta a ponta cobrem reserva, visita e compra/retirada. Sandbox/simulações controladas cobrem falhas de provedor.
 
 CI executa compilação, análise estática e testes aplicáveis. Nenhum teste de aplicação foi executado nesta entrega exclusivamente documental.
 
@@ -609,7 +611,7 @@ Primeiro validar a operação do próprio Puzzle Bar. Qualidade profissional é 
 | SaaS para vários bares | Organização contratante, vínculos, isolamento, provisionamento, assinatura e administração |
 | Rede com várias unidades | Organização separada de estabelecimento, catálogo e permissões por unidade |
 
-Ter tabela estabelecimento não torna o sistema multitenant. Antes de compartilhar banco entre clientes, revisar consultas, FKs, unicidades, jobs, arquivos, logs e permissões. Acrescentar organização, vínculo e assinatura apenas quando a modalidade exigir. Row-level security pode ser defesa adicional, com configuração e testes; não substitui autorização. [Documentação PostgreSQL](https://www.postgresql.org/docs/17/ddl-rowsecurity.html).
+Ter tabela estabelecimento não torna o sistema multitenant. Antes de compartilhar banco entre clientes, revisar consultas, FKs, unicidades, jobs, arquivos, logs e permissões. Acrescentar organização, vínculo e assinatura apenas quando a modalidade exigir. No MySQL, o isolamento por organização será aplicado explicitamente nos serviços, consultas, chaves e testes; para exigências mais fortes, considerar um database separado por cliente. Isso não substitui autorização por recurso na aplicação.
 
 Expansões previsíveis: delivery precisa de endereço histórico, área/taxa e entrega; várias mesas por reserva exigem relação reserva–mesa e alocação atômica; cupons precisam de regras/resgates; fidelidade de lançamentos de pontos; sinal de reserva de conta, expiração e devolução. Não implementar essas entidades antecipadamente.
 
@@ -667,15 +669,15 @@ Consulta de disponibilidade é apenas informativa. A confirmação repete todas 
 
 ### 17.3 Modelo físico proposto para E1
 
-Nomes físicos usam `snake_case`; entidades Java podem usar nomes em inglês ou português, mas o projeto deve escolher um idioma e manter consistência. Abaixo, `uuid` indica PK gerada pela aplicação; `timestamptz` representa instante; campos `created_at` e `updated_at` aparecem nos cadastros mutáveis.
+Nomes físicos usam `snake_case`; entidades Java podem usar nomes em inglês ou português, mas o projeto deve escolher um idioma e manter consistência. Abaixo, `binary(16)` representa UUID convertido pela aplicação; `datetime(6)` representa instante UTC com microssegundos; campos `created_at` e `updated_at` aparecem nos cadastros mutáveis. As tabelas usam `ENGINE=InnoDB`, `DEFAULT CHARSET=utf8mb4` e a mesma collation.
 
 #### Identidade
 
 | Tabela | Colunas essenciais | Restrições e índices |
 | --- | --- | --- |
-| `users` | `id uuid`, `name varchar(120)`, `email varchar(254)`, `email_normalized varchar(254)`, `phone varchar(32) null`, `password_hash varchar(255)`, `status varchar(20)`, `email_verified_at timestamptz null`, timestamps, `version bigint` | PK; UNIQUE `email_normalized`; CHECK de status; índice por status |
-| `user_roles` | `user_id uuid`, `role varchar(30)`, `created_at timestamptz` | PK composta; FK para users; CHECK de papel |
-| `access_tokens` | `id uuid`, `user_id uuid`, `purpose varchar(30)`, `token_hash varchar(255)`, `expires_at timestamptz`, `consumed_at timestamptz null`, `created_at timestamptz` | PK; FK; UNIQUE `token_hash`; índice usuário/finalidade/expiração |
+| `users` | `id binary(16)`, `name varchar(120)`, `email varchar(254)`, `email_normalized varchar(254)`, `phone varchar(32) null`, `password_hash varchar(255)`, `status varchar(20)`, `email_verified_at datetime(6) null`, timestamps UTC, `version bigint` | PK; UNIQUE `email_normalized`; CHECK de status; índice por status |
+| `user_roles` | `user_id binary(16)`, `role varchar(30)`, `created_at datetime(6)` | PK composta; FK para users; CHECK de papel |
+| `access_tokens` | `id binary(16)`, `user_id binary(16)`, `purpose varchar(30)`, `token_hash varchar(255)`, `expires_at datetime(6)`, `consumed_at datetime(6) null`, `created_at datetime(6)` | PK; FK; UNIQUE `token_hash`; índice usuário/finalidade/expiração |
 
 Não guardar token puro. Ao redefinir senha, consumir o token atomicamente e invalidar as demais sessões conforme política adotada. Contas de equipe são criadas/convidadas por usuário autorizado; cadastro público sempre nasce apenas com papel CLIENT.
 
@@ -683,29 +685,30 @@ Não guardar token puro. Ao redefinir senha, consumir o token atomicamente e inv
 
 | Tabela | Colunas essenciais | Restrições e índices |
 | --- | --- | --- |
-| `establishments` | `id uuid`, `name varchar(120)`, `slug varchar(80)`, contatos, endereço estruturado, `timezone varchar(64)`, `currency char(3)`, `locale varchar(10)`, parâmetros de reserva, timestamps, `version bigint` | PK; UNIQUE slug; checks dos parâmetros |
-| `business_hours` | `id uuid`, `establishment_id uuid`, `weekday smallint`, `channel varchar(20)`, `opens_at time`, `closes_at time`, `ends_next_day boolean`, `active boolean` | FK; CHECK dia 1–7 e intervalo não vazio; índice estabelecimento/dia/canal |
-| `business_hour_exceptions` | `id uuid`, `establishment_id uuid`, `local_date date`, `channel varchar(20)`, `closed boolean`, `opens_at time null`, `closes_at time null`, `ends_next_day boolean`, `reason varchar(200) null` | FK; UNIQUE estabelecimento/data/canal/faixa; CHECK fechado versus horários |
-| `areas` | `id uuid`, `establishment_id uuid`, `name varchar(80)`, `display_order integer`, `active boolean`, timestamps | FK; UNIQUE estabelecimento/nome; ordem não negativa |
-| `tables` | `id uuid`, `area_id uuid`, `code varchar(30)`, `capacity smallint`, `active boolean`, timestamps, `version bigint` | FK; capacidade positiva; UNIQUE por área/código; índice área/ativa/capacidade |
-| `table_allocations` | `id uuid`, `table_id uuid`, `starts_at timestamptz`, `ends_at timestamptz`, `type varchar(20)`, `active boolean`, `reason varchar(240) null`, timestamps | FK; fim maior que início; índice mesa/início/fim; exclusão de sobreposição ativa |
-| `reservations` | `id uuid`, `allocation_id uuid`, `customer_id uuid null`, `contact_name varchar(120)`, `contact_phone varchar(32)`, `party_size smallint`, `status varchar(24)`, `confirmation_code varchar(20)`, `notes varchar(500) null`, `policy_version varchar(30)`, `created_by uuid`, `cancelled_at timestamptz null`, `cancellation_reason varchar(240) null`, timestamps, `version bigint` | FKs; UNIQUE alocação e código; pessoas positivas; índices cliente/criação e status/início via consulta com alocação |
+| `establishments` | `id binary(16)`, `name varchar(120)`, `slug varchar(80)`, contatos, endereço estruturado, `timezone varchar(64)`, `currency char(3)`, `locale varchar(10)`, parâmetros de reserva, timestamps UTC, `version bigint` | PK; UNIQUE slug; checks dos parâmetros |
+| `business_hours` | `id binary(16)`, `establishment_id binary(16)`, `weekday tinyint`, `channel varchar(20)`, `opens_at time`, `closes_at time`, `ends_next_day boolean`, `active boolean` | FK; CHECK dia 1–7 e intervalo não vazio; índice estabelecimento/dia/canal |
+| `business_hour_exceptions` | `id binary(16)`, `establishment_id binary(16)`, `local_date date`, `channel varchar(20)`, `closed boolean`, `opens_at time null`, `closes_at time null`, `ends_next_day boolean`, `reason varchar(200) null` | FK; UNIQUE estabelecimento/data/canal/faixa; CHECK fechado versus horários |
+| `areas` | `id binary(16)`, `establishment_id binary(16)`, `name varchar(80)`, `display_order int`, `active boolean`, timestamps UTC | FK; UNIQUE estabelecimento/nome; ordem não negativa |
+| `tables` | `id binary(16)`, `area_id binary(16)`, `code varchar(30)`, `capacity smallint`, `active boolean`, timestamps UTC, `version bigint` | FK; capacidade positiva; UNIQUE por área/código; índice área/ativa/capacidade |
+| `table_allocations` | `id binary(16)`, `table_id binary(16)`, `starts_at datetime(6)`, `ends_at datetime(6)`, `type varchar(20)`, `active boolean`, `reason varchar(240) null`, timestamps UTC | FK; fim maior que início; índice `(table_id, active, starts_at, ends_at)` |
+| `table_allocation_slots` | `allocation_id binary(16)`, `table_id binary(16)`, `slot_start datetime(6)` | PK `(allocation_id, slot_start)`; FKs; UNIQUE `(table_id, slot_start)` garante exclusividade |
+| `reservations` | `id binary(16)`, `allocation_id binary(16)`, `customer_id binary(16) null`, `contact_name varchar(120)`, `contact_phone varchar(32)`, `party_size smallint`, `status varchar(24)`, `confirmation_code varchar(20)`, `notes varchar(500) null`, `policy_version varchar(30)`, `created_by binary(16)`, `cancelled_at datetime(6) null`, `cancellation_reason varchar(240) null`, timestamps UTC, `version bigint` | FKs; UNIQUE alocação e código; pessoas positivas; índices cliente/criação e status; consulta de agenda une alocação |
 
-O código da mesa deve ser único em todo o estabelecimento na regra da aplicação; como a tabela referencia ambiente, isso pode ser reforçado incluindo `establishment_id` diretamente com FK composta ou com validação transacional. Na versão física final, preferir a estrutura que permita a constraint direta e consultas operacionais simples.
+O código da mesa deve ser único em todo o estabelecimento na regra da aplicação; como a tabela referencia ambiente, isso pode ser reforçado incluindo `establishment_id` diretamente com FK composta ou validação transacional. Na versão física final, preferir a estrutura que permita a constraint direta e consultas simples.
 
-PostgreSQL deverá habilitar `btree_gist` se a constraint proposta exigir igualdade de UUID no GiST. A migration deve criar uma exclusão equivalente a: mesma `table_id` não pode possuir `tstzrange(starts_at, ends_at, '[)')` sobreposto quando `active = true`. Cancelar desativa a alocação dentro da mesma transação que muda a reserva.
+Cada alocação ocupa células consecutivas de 15 minutos no intervalo `[starts_at, ends_at)`. A transação insere a alocação e todos os seus slots. A UNIQUE `(table_id, slot_start)` faz uma das transações concorrentes falhar se duas tentarem ocupar a mesma mesa/célula. Cancelar remove os slots e desativa a alocação na mesma transação; o registro histórico da alocação permanece. Bloqueios e reservas devem começar/terminar em múltiplos de 15 minutos. A granularidade interna é fixa, mesmo que a interface ofereça horários a cada 30 ou 60 minutos.
 
 #### Cardápio e comunicação
 
 | Tabela | Colunas essenciais | Restrições e índices |
 | --- | --- | --- |
-| `categories` | `id uuid`, `establishment_id uuid`, `name varchar(80)`, `slug varchar(80)`, `display_order integer`, `active boolean`, timestamps | FK; UNIQUE estabelecimento/slug e estabelecimento/nome; ordem não negativa |
-| `products` | `id uuid`, `category_id uuid`, `name varchar(120)`, `slug varchar(100)`, `description varchar(1200)`, `price numeric(12,2)`, `preparation_station varchar(24)`, `active boolean`, `available boolean`, `alcoholic boolean`, timestamps, `version bigint` | FK; preço não negativo; UNIQUE categoria/slug; índices categoria/ativo/ordenação |
-| `product_images` | `id uuid`, `product_id uuid`, `storage_key varchar(500)`, `alt_text varchar(240)`, `display_order integer` | FK; UNIQUE produto/ordem e produto/chave |
-| `allergens` | `id uuid`, `name varchar(80)`, `code varchar(40)` | UNIQUE nome normalizado e code |
-| `product_allergens` | `product_id uuid`, `allergen_id uuid`, `notice_type varchar(20)` | PK composta incluindo tipo; FKs; CHECK tipo |
-| `notifications` | `id uuid`, `type varchar(40)`, `recipient varchar(254)`, `business_reference_type varchar(40)`, `business_reference_id uuid`, `status varchar(20)`, `attempt_count integer`, `next_attempt_at timestamptz`, `last_error_code varchar(80) null`, timestamps | Tentativas não negativas; índices estado/próxima tentativa e referência |
-| `audit_events` | `id uuid`, `actor_id uuid null`, `action varchar(80)`, `resource_type varchar(60)`, `resource_id uuid null`, `result varchar(20)`, `reason varchar(240) null`, `request_id varchar(80)`, `occurred_at timestamptz`, `metadata jsonb` | Índices instante, ator e recurso; metadata sem segredos/dados excessivos |
+| `categories` | `id binary(16)`, `establishment_id binary(16)`, `name varchar(80)`, `slug varchar(80)`, `display_order int`, `active boolean`, timestamps UTC | FK; UNIQUE estabelecimento/slug e estabelecimento/nome; ordem não negativa |
+| `products` | `id binary(16)`, `category_id binary(16)`, `name varchar(120)`, `slug varchar(100)`, `description varchar(1200)`, `price decimal(12,2)`, `preparation_station varchar(24)`, `active boolean`, `available boolean`, `alcoholic boolean`, timestamps UTC, `version bigint` | FK; preço não negativo; UNIQUE categoria/slug; índices categoria/ativo/ordenação |
+| `product_images` | `id binary(16)`, `product_id binary(16)`, `storage_key varchar(500)`, `alt_text varchar(240)`, `display_order int` | FK; UNIQUE produto/ordem e produto/chave |
+| `allergens` | `id binary(16)`, `name varchar(80)`, `code varchar(40)` | UNIQUE nome normalizado e code |
+| `product_allergens` | `product_id binary(16)`, `allergen_id binary(16)`, `notice_type varchar(20)` | PK composta incluindo tipo; FKs; CHECK tipo |
+| `notifications` | `id binary(16)`, `type varchar(40)`, `recipient varchar(254)`, `business_reference_type varchar(40)`, `business_reference_id binary(16)`, `status varchar(20)`, `attempt_count int`, `next_attempt_at datetime(6)`, `last_error_code varchar(80) null`, timestamps UTC | Tentativas não negativas; índices estado/próxima tentativa e referência |
+| `audit_events` | `id binary(16)`, `actor_id binary(16) null`, `action varchar(80)`, `resource_type varchar(60)`, `resource_id binary(16) null`, `result varchar(20)`, `reason varchar(240) null`, `request_id varchar(80)`, `occurred_at datetime(6)`, `metadata json` | Índices instante, ator e recurso; JSON sem segredos/dados excessivos |
 
 Imagens ficam em armazenamento de objetos; banco guarda chave estável. Exclusão de categoria com produtos é bloqueada; preferir inativação. Produto usado futuramente em venda nunca será removido fisicamente por fluxo comum.
 
@@ -713,7 +716,7 @@ Imagens ficam em armazenamento de objetos; banco guarda chave estável. Exclusã
 
 | Caso de uso | Limite transacional | Resultado |
 | --- | --- | --- |
-| Confirmar reserva | Recarregar configuração e mesa candidata; inserir alocação; inserir reserva; registrar auditoria/solicitação de notificação | Commit único; constraint decide disputa real |
+| Confirmar reserva | Recarregar configuração; selecionar candidatas em ordem; bloquear linha da mesa com `SELECT ... FOR UPDATE`; revalidar; inserir alocação e slots; inserir reserva; registrar auditoria/notificação | Commit único; UNIQUE dos slots decide disputa final |
 | Cancelar reserva | Bloquear reserva; validar proprietário/prazo; mudar status; desativar alocação; registrar auditoria/notificação | Horário liberado junto com cancelamento |
 | Remarcar | Validar novo intervalo; criar/substituir alocação com proteção contra sobreposição; atualizar reserva e auditoria | Nunca fica com dois horários ativos |
 | Check-in | Bloquear reserva; validar estado/tolerância; mudar para CHECK_IN; registrar ator/instante | Repetição idempotente retorna estado atual |
@@ -954,7 +957,7 @@ Disponível é uma pausa operacional; ativo controla publicação permanente. A 
 
 - Repositório inicia ambiente local de forma documentada e repetível quando a implementação começar.
 - Migrations criam banco vazio e executam atualização a partir da versão anterior.
-- Testes de integração usam PostgreSQL e verificam constraint de sobreposição e transações críticas.
+- Testes de integração usam MySQL 8.4 com InnoDB e verificam unicidade dos slots, bloqueios, deadlocks e transações críticas.
 - Contrato OpenAPI descreve rotas, segurança, exemplos e erros da E1.
 - CI compila front/back, executa análises e testes, e bloqueia integração em falha.
 - Acessibilidade cobre teclado, foco, rótulos, mensagens associadas, contraste e semântica nas jornadas críticas.
@@ -991,3 +994,11 @@ O planejamento-base está concluído. A revisão humana final deve confirmar ape
 - infraestrutura e dispositivos disponíveis no pub.
 
 Com esses dados confirmados, o próximo trabalho é converter o backlog da E1 em tarefas e iniciar a fundação. Mudanças futuras devem atualizar primeiro este documento quando afetarem regras, dados, contratos ou segurança.
+
+## 23. Registro de decisões arquiteturais
+
+| Data | Decisão | Motivo | Impacto |
+| --- | --- | --- | --- |
+| 04/10/2026 | Adotar MySQL 8.4 LTS com InnoDB | Escolha do autor para o banco principal do projeto | Tipos físicos adaptados; testes passam a usar MySQL; concorrência de reservas usa slots de 15 minutos com UNIQUE e bloqueios transacionais |
+
+Esta decisão substitui qualquer recomendação anterior de outro banco. Uma eventual troca futura exigirá nova decisão registrada, migrations de dados, revisão de SQL, índices, bloqueios, testes e procedimentos de backup/restauração.
