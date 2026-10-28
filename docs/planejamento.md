@@ -1,13 +1,13 @@
-# Puzzle Bar — planejamento e arquitetura
+# STEREO — planejamento e arquitetura
 
-- **Versão:** 1.1 — MySQL adotado como banco oficial.
-- **Data:** 04/10/2026.
-- **Entrega atual:** somente documentação; nenhuma aplicação foi implementada.
-- **Estado:** arquitetura do produto e especificação da E1 concluídas; pronto para revisão do autor antes da implementação.
+- **Versão:** 1.3 — Reservas com solicitação e aprovação manual da equipe.
+- **Data:** 28/10/2026.
+- **Entrega atual:** planejamento documentado e projetos-base de front-end/back-end criados; home e página Sobre institucionais implementadas; cardápio público com dados mockados e detalhes em diálogo; Visite e solicitação de mesa com acesso/análise demonstrativos locais; integrações e autenticação reais pendentes.
+- **Estado:** E1 em implementação de interfaces com dados demonstrativos; autenticação, integrações e regras no servidor ainda pendentes.
 
 ## 1. Visão do produto
 
-O Puzzle Bar será um pub com características marcantes de Londres e da Alemanha. A aplicação reúne apresentação do estabelecimento, cardápio, reservas, atendimento presencial, pedidos online e pagamentos.
+O STEREO será um bar que toca eletrohits, em Aracaju-SE, com a música como parte central da identidade e da experiência do estabelecimento. A proposta é um bar relativamente grande para encontros e convivência, com eletrohits como música ambiente em aproximadamente 85% do tempo e DJs convidados ocasionalmente, por exemplo nos fins de semana. A aplicação reúne apresentação do estabelecimento, cardápio, reservas, atendimento presencial, pedidos online e pagamentos.
 
 O objetivo educacional é aprender uma aplicação web de ponta a ponta, aprofundando banco de dados, APIs, segurança, transações e operação. A qualidade profissional deve aparecer na consistência dos dados, experiência dos usuários, testes, documentação e recuperação de falhas.
 
@@ -16,7 +16,7 @@ O objetivo educacional é aprender uma aplicação web de ponta a ponta, aprofun
 - Front-end em Next.js e back-end em Spring Boot.
 - Banco definido como MySQL com mecanismo InnoDB.
 - Reservas, pedidos online e pagamentos fazem parte do produto.
-- Identidade londrina e alemã; possibilidade de comercialização futura.
+- Nome do estabelecimento: STEREO; conceito de bar que toca eletrohits, com possibilidade de comercialização futura.
 - Planejar antes de programar; neste momento, criar apenas um documento.
 
 ### 1.2 Propostas adotadas
@@ -25,9 +25,9 @@ Estas escolhas tornam o plano concreto, mas ainda podem ser revistas pelo autor.
 
 | Tema | Proposta inicial | Consequência |
 | --- | --- | --- |
-| Operação | Um pub | Sem estrutura de SaaS inicialmente |
+| Operação | Um bar | Sem estrutura de SaaS inicialmente |
 | Banco | MySQL 8.4 LTS com InnoDB | Estudo de SQL, integridade, bloqueios e concorrência |
-| Pedido online | Retirada no pub | Delivery fica para evolução |
+| Pedido online | Retirada no bar | Delivery fica para evolução |
 | Pedido presencial | Equipe registra em comanda de mesa | Autopedido por QR Code posterior |
 | Cliente no site | Conta necessária para reservar/comprar | Histórico e autorização por proprietário |
 | Cliente presencial | Conta não obrigatória | Equipe registra contato avulso quando necessário |
@@ -37,7 +37,7 @@ Estas escolhas tornam o plano concreto, mas ainda podem ser revistas pelo autor.
 | Sinal de reserva | Não cobrar no início | Depósito exige fluxo financeiro próprio |
 | Localização | Uma moeda e um fuso configurados | Confirmar país e regras aplicáveis |
 
-A temática europeia não determina país de operação, moeda ou legislação. Eventos temáticos e conteúdo institucional podem começar como conteúdo versionado, sem CMS.
+A identidade musical orienta a comunicação e a ambientação do STEREO. Conteúdo institucional e destaques musicais podem começar como conteúdo versionado, sem CMS. DJs convidados fazem parte da proposta de experiência; datas e artistas ainda serão definidos. Gestão de agenda de DJs, venda de ingressos e integração com serviços de música dependem de definição futura de escopo.
 
 ## 2. Escopo e entregas
 
@@ -65,7 +65,7 @@ Um usuário pode acumular papéis. Papéis iniciais são fixos; não é necessá
 | Preparação | Itens de cozinha/bar e atualização de preparo | Sem dados financeiros/pessoais desnecessários |
 | Caixa | Conta, recebimentos e fechamento | Estorno e desconto excepcional exigem gerência |
 | Gerente | Cardápio, equipe operacional, descontos, cancelamentos, estornos e relatórios | Não atribui papel de proprietário |
-| Proprietário | Configuração sensível e acesso integral ao pub | Ações sensíveis continuam auditadas |
+| Proprietário | Configuração sensível e acesso integral ao bar | Ações sensíveis continuam auditadas |
 
 Autorizar ação e recurso no Spring. Ocultar botão não protege API. Impedir autoelevação e remoção do último proprietário ativo. Referência: [autorização no OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html).
 
@@ -73,16 +73,17 @@ Autorizar ação e recurso no Spring. Ocultar botão não protege API. Impedir a
 
 ### 4.1 Reserva
 
-1. Cliente informa data, horário e pessoas.
-2. API verifica funcionamento, capacidade, duração e bloqueios.
-3. Cliente autentica, informa contato e confirma a política apresentada.
-4. API escolhe mesa compatível e grava reserva/alocação em uma transação.
-5. Se outro cliente tomou o horário, retornar conflito e alternativas.
-6. Confirmação aparece na aplicação; e-mail é enviado separadamente com retentativas.
-7. Equipe registra check-in e, em E2, abre comanda na mesma alocação.
-8. Cancelamento/ausência libera o intervalo conforme a política.
+1. Cliente autentica antes de enviar a solicitação pelo site.
+2. Informa quantidade de pessoas, data e horário; a API consulta funcionamento, capacidade, duração e bloqueios.
+3. Cliente revisa contato, observação e política e envia uma proposta em estado PENDING_APPROVAL.
+4. A solicitação guarda período desejado e pessoas, sem alocar nem bloquear mesa.
+5. Equipe autorizada (administrador/moderador, mapeados inicialmente a Gerente/Proprietário) aceita ou recusa a proposta; a recusa registra motivo.
+6. Ao aceitar, API repete as validações e escolhe mesa compatível em transação; só então cria alocação/slots e muda para CONFIRMED.
+7. Se o horário deixou de estar disponível, aprovação retorna conflito e mantém a solicitação pendente, sem prometer mesa. Recusa muda para REJECTED.
+8. Cliente acompanha o estado; confirmação aparece após o aceite e envio de e-mail ocorre separadamente com retentativas.
+9. Equipe registra check-in e, em E2, abre comanda na mesma alocação. Cancelamento/ausência de reserva alocada libera o intervalo conforme a política.
 
-Consultar horário não bloqueia mesa. Proposta de protótipo: duração de 2 horas e tolerância de 15 minutos, configuráveis e ainda a validar. Ausência é registrada pela equipe inicialmente, sem cancelamento automático apenas pelo relógio.
+Consultar disponibilidade e enviar solicitação não bloqueiam mesa. Podem existir propostas concorrentes para o mesmo horário; apenas a aprovação efetiva consome capacidade. Cliente pode cancelar uma proposta pendente antes da decisão; reservas confirmadas seguem o prazo de cancelamento. Duração proposta: 2 horas; tolerância: 15 minutos. Ausência é registrada pela equipe apenas para reserva confirmada, sem cancelamento automático pelo relógio. A integração de notificações e a política de prazo para análise ainda serão implementadas/definidas antes de operação real.
 
 Horários podem atravessar meia-noite; exceções de calendário prevalecem sobre semana. Inativar mesa impede novas reservas, mas exige resolver as futuras existentes.
 
@@ -150,7 +151,7 @@ Uma aplicação Spring implantável, organizada por negócio, e um MySQL com Inn
 | Módulo | Responsabilidade |
 | --- | --- |
 | identity | Usuários, credenciais, sessões e papéis |
-| establishment | Pub, horários, ambientes e mesas |
+| establishment | Bar, horários, ambientes e mesas |
 | catalog | Produtos, categorias, imagens, opções e disponibilidade |
 | reservations | Disponibilidade, alocação, reserva e chegada |
 | service | Comandas e salão |
@@ -191,7 +192,7 @@ Redis, Kafka, Kubernetes, Elasticsearch e microsserviços dependem de necessidad
 
 - UUID como identificador externo, armazenado como `BINARY(16)` para índices compactos; a aplicação converte entre texto canônico e bytes. Identificadores não substituem autorização.
 - PK identifica linha; FK referencia tabela; UNIQUE impede repetição; CHECK restringe valores.
-- Instantes em UTC como `DATETIME(6)`; apresentação no fuso do pub. O pool de conexões e Hibernate devem operar em UTC. Definir data comercial para turnos após meia-noite.
+- Instantes em UTC como `DATETIME(6)`; apresentação no fuso do bar. O pool de conexões e Hibernate devem operar em UTC. Definir data comercial para turnos após meia-noite.
 - Dinheiro decimal exato/BigDecimal, moeda e arredondamento explícitos. `DECIMAL(12,2)` é a proposta para moeda de duas casas; confirmar moeda/limites antes do DDL. Insumos podem exigir mais precisão.
 - Quantidade vendida em unidades inteiras no MVP; volumes distintos são produtos/variantes com receitas próprias.
 - Cadastros mutáveis recebem criação/atualização e versão quando necessário à concorrência.
@@ -215,7 +216,7 @@ O inventário abaixo é um modelo lógico. Tamanhos, nulabilidade completa e DDL
 | horario_funcionamento | id, estabelecimento_id FK, dia_semana, inicio, fim, termina_dia_seguinte, canal | Salão/retirada; várias faixas por dia | E1 |
 | excecao_funcionamento | id, estabelecimento_id FK, data, fechado, intervalos_substitutos, motivo | Substitui semana; intervalos estruturados e validados | E1 |
 | ambiente | id, estabelecimento_id FK, nome, ativo | Salão, área externa etc. | E1 |
-| mesa | id, ambiente_id FK, codigo, capacidade, ativa | Código único no pub; capacidade positiva | E1 |
+| mesa | id, ambiente_id FK, codigo, capacidade, ativa | Código único no bar; capacidade positiva | E1 |
 
 Sessões são infraestrutura do framework. JDBC é proposta de armazenamento para sobreviver a reinícios; tabelas de Spring Session serão tratadas segundo a configuração escolhida.
 
@@ -223,12 +224,12 @@ Sessões são infraestrutura do framework. JDBC é proposta de armazenamento par
 
 | Entidade | Campos principais | Regra/finalidade | Entrega |
 | --- | --- | --- | --- |
-| categoria | id, estabelecimento_id FK, nome, slug, ordem, ativa | Slug único no pub | E1 |
+| categoria | id, estabelecimento_id FK, nome, slug, ordem, ativa | Slug único no bar | E1 |
 | produto | id, categoria_id FK, nome, slug, descricao, preco_atual, setor_preparo, ativo, disponivel, alcoolico | Preço não negativo; BAR/COZINHA/SEM_PREPARO | E1 |
 | imagem_produto | id, produto_id FK, chave_arquivo, texto_alternativo, ordem | Arquivo fora do banco; guardar referência | E1 |
 | grupo_opcao | id, produto_id FK, nome, minimo, maximo | Limites válidos de seleção | E2 |
 | opcao_produto | id, grupo_opcao_id FK, nome, acrescimo_preco, ativa | Escolhas/adicionais validados no servidor | E2 |
-| alergeno | id, nome | Vocabulário informado pelo pub | E1 |
+| alergeno | id, nome | Vocabulário informado pelo bar | E1 |
 | produto_alergeno | produto_id FK, alergeno_id FK, tipo_aviso | Contém/pode conter conforme informação validada | E1 |
 
 Origem de pratos/bebidas pode começar como texto editorial. Não inferir alergênicos pelo nome do prato. Entidade de origem só se justifica por filtros/regras reais.
@@ -239,10 +240,10 @@ Origem de pratos/bebidas pode começar como texto editorial. Não inferir alerg�
 | --- | --- | --- | --- |
 | alocacao_mesa | id, mesa_id FK, inicio, fim, tipo, ativa, motivo | Agenda de reserva, entrada sem reserva e bloqueio manual | E1 |
 | slot_alocacao_mesa | alocacao_id FK, mesa_id FK, inicio_slot | Células de 15 minutos; unicidade por mesa/horário impede sobreposição ativa | E1 |
-| reserva | id, alocacao_mesa_id FK único, cliente_id FK opcional, nome_contato, telefone_contato, pessoas, status, codigo, observacao, politica_versao | Site exige cliente; equipe aceita avulso; código único | E1 |
+| reserva | id, alocacao_mesa_id FK opcional único, inicio_desejado, fim_desejado, cliente_id FK opcional, nome_contato, telefone_contato, pessoas, status, codigo, observacao, politica_versao | Site exige cliente; pendente/recusada sem alocação; aceite cria alocação; código único | E1 |
 | comanda | id, alocacao_mesa_id FK único, cliente_id FK opcional, aberta_por FK, status, aberta_em, fechada_em, versao | Uma visita por alocação; uma comanda ativa por mesa | E2 |
 
-Mesma alocação pode se ligar à reserva e à comanda no check-in, evitando dois bloqueios para uma visita. Mesa/horário vêm da alocação. Bloqueios manuais participam da mesma agenda e regra de não sobreposição.
+Mesma alocação pode se ligar à reserva e à comanda no check-in, evitando dois bloqueios para uma visita. Após aprovação, mesa/horário efetivos vêm da alocação; a proposta pendente guarda o intervalo desejado e não possui mesa. Bloqueios manuais participam da mesma agenda e regra de não sobreposição.
 
 ### 6.5 Pedidos e preparação
 
@@ -359,7 +360,7 @@ Checks simples não resolvem regras entre várias linhas. Testar concorrência, 
 
 | Objeto | Estados principais | Regra |
 | --- | --- | --- |
-| Reserva | CONFIRMADA, CHECK_IN, CONCLUIDA, CANCELADA, NAO_COMPARECEU | Remarcação revalida agenda; não ressuscitar cancelada por edição livre |
+| Reserva | PENDENTE_APROVACAO, CONFIRMADA, RECUSADA, CHECK_IN, CONCLUIDA, CANCELADA, NAO_COMPARECEU | Somente aceite autorizado aloca mesa; remarcação revalida agenda; não ressuscitar cancelada/recusada |
 | Comanda | ABERTA, EM_FECHAMENTO, FECHADA, CANCELADA | EM_FECHAMENTO bloqueia lançamentos; FECHADA exige quitação |
 | Pedido online | AGUARDANDO_PAGAMENTO, CONFIRMADO, EM_PREPARO, PRONTO, ENTREGUE, CANCELADO, EM_REVISAO | Confirmação financeira válida libera preparo |
 | Pedido presencial | CONFIRMADO, EM_PREPARO, PRONTO, ENTREGUE, CANCELADO | Sem pagamento antecipado obrigatório |
@@ -385,11 +386,11 @@ Rotas são propostas. Formulários/detalhes podem compartilhar layout; a lista r
 | ID | Tela/rota | Conteúdo e ações | Entrega |
 | --- | --- | --- | --- |
 | P01 | Início `/` | Identidade, destaques, horários, reservar e pedir | E1 |
-| P02 | Sobre `/sobre` | História, proposta londrina/alemã e ambientes | E1 |
+| P02 | Sobre `/sobre` | História, proposta musical de eletrohits e ambientes | E1 |
 | P03 | Cardápio `/cardapio` | Categorias, preços, disponibilidade e informações alimentares | E1 |
 | P04 | Produto `/cardapio/[slug]` | Imagens, descrição, opções e carrinho quando habilitado | E1/E3 |
 | P05 | Visite `/visite` | Endereço, contato, acessibilidade informada e horários | E1 |
-| P06 | Reservar `/reservas/nova` | Pessoas, data, opções de horário, contato e revisão | E1 |
+| P06 | Reservar `/reservas/nova` | Acesso, pessoas, data, disponibilidade e envio de solicitação para aprovação | E1 |
 | P07 | Política de reservas `/politicas/reservas` | Duração, tolerância, cancelamento e versão vigente | E1 |
 | P08 | Privacidade `/privacidade` | Uso de dados e canal de contato, conforme política definida | E1 |
 | P09 | Condições de compra `/politicas/compras` | Retirada, cancelamento e devolução | E3 |
@@ -406,7 +407,7 @@ Rotas são propostas. Formulários/detalhes podem compartilhar layout; a lista r
 | C01 | Minha conta `/conta` | Próxima reserva, pedido ativo e atalhos | E1/E3 |
 | C02 | Perfil `/conta/perfil` | Dados pessoais, contato e senha | E1 |
 | C03 | Reservas `/conta/reservas` | Futuras, anteriores e canceladas | E1 |
-| C04 | Reserva `/conta/reservas/[id]` | Confirmação, horário, pessoas e cancelamento permitido | E1 |
+| C04 | Reserva `/conta/reservas/[id]` | Estado pendente/confirmado/recusado, horário, pessoas e cancelamento permitido | E1 |
 | C05 | Carrinho `/carrinho` | Itens, opções, quantidades, remoção e subtotal estimado | E3 |
 | C06 | Revisão `/checkout` | Orçamento validado, disponibilidade, contato, retirada e pagar | E3 |
 | C07 | Retorno `/checkout/retorno` | Pendente, confirmado, recusado ou expirado; consulta back-end | E3 |
@@ -422,7 +423,7 @@ C10 pode começar como canal operacional documentado. Não implica exclusão aut
 | --- | --- | --- | --- |
 | O01 | Turno `/operacao` | Equipe: reservas próximas, mesas e pedidos atrasados | E1/E2 |
 | O02 | Agenda `/operacao/reservas` | Atendimento: calendário/lista, filtros, reserva manual e ausência | E1 |
-| O03 | Reserva `/operacao/reservas/[id]` | Atendimento: contato, check-in, cancelamento e remarcação | E1 |
+| O03 | Reserva `/operacao/reservas/[id]` | Equipe: análise autorizada, contato, check-in, cancelamento e remarcação | E1 |
 | O04 | Mesas `/operacao/mesas` | Atendimento: ocupação real, próxima reserva e abertura de comanda | E2 |
 | O05 | Comanda `/operacao/comandas/[id]` | Atendimento/caixa: rodadas, itens, total e solicitar fechamento | E2 |
 | O06 | Novo pedido `/operacao/comandas/[id]/pedidos/novo` | Atendimento: busca, opções, observações e envio | E2 |
@@ -452,7 +453,7 @@ C10 pode começar como canal operacional documentado. Não implica exclusão aut
 | G13 | Inventário/perdas `/gestao/estoque/ajustes` | Contagem, diferença, motivo e ajuste | E4 |
 | G14 | Relatórios `/gestao/relatorios` | Vendas, recebimentos, cancelamentos, reservas e produtos | E2/E3; ampliar E4 |
 | G15 | Auditoria `/gestao/auditoria` | Autor, ação, período, alvo e justificativa | E2; base E1 |
-| G16 | Configuração `/gestao/configuracoes` | Pub, moeda, fuso e parâmetros | E1 |
+| G16 | Configuração `/gestao/configuracoes` | Bar, moeda, fuso e parâmetros | E1 |
 | G17 | Integrações `/gestao/integracoes` | Estado de pagamento/e-mail e falhas; nunca exibir segredos | E3 |
 
 ### 8.5 Estados e experiência
@@ -465,9 +466,9 @@ Não mostrar sucesso definitivo antes de confirmação do servidor. Offline não
 
 ### 8.6 Direção visual
 
-Proposta: tons escuros, madeira, creme e acentos em vermelho ou âmbar; títulos expressivos e texto legível; referências culturais em fotografia, nomes e ambientação. Validar com referências antes do design final.
+Proposta: atmosfera noturna, base escura e acentos luminosos inspirados em luzes de pista; tipografia expressiva e texto legível; referências a som, ritmo e eletrohits na fotografia, composição e ambientação. Paleta, fontes e elementos gráficos devem ser validados com referências antes do design final.
 
-Site prioriza mobile, cardápio, reservar e pedir. Atendimento prioriza celular/tablet; preparação, tela ampla; gestão, desktop responsivo. Estados têm texto/ícone além de cor. Exigir rótulos, foco visível, teclado e contraste. Temática não deve prejudicar leitura nem sugerir origem não confirmada de produtos.
+Site prioriza mobile, cardápio, reservar e pedir. Atendimento prioriza celular/tablet; preparação, tela ampla; gestão, desktop responsivo. Estados têm texto/ícone além de cor. Exigir rótulos, foco visível, teclado e contraste. A identidade musical não deve prejudicar a leitura; animações devem respeitar preferência por movimento reduzido, e áudio não deve iniciar automaticamente.
 
 Este catálogo descreve as telas do escopo proposto; wireframes e layouts finais serão uma etapa posterior, ainda antes de implementar a interface.
 
@@ -478,7 +479,7 @@ Prefixo proposto: `/api/v1`. A tabela representa famílias essenciais, não um O
 | Área | Operações principais | Acesso |
 | --- | --- | --- |
 | Acesso | `POST /auth/register`, `/auth/login`, `/auth/logout`, `/auth/password-reset-requests`, `/auth/password-resets`, `/auth/email-verifications`; `GET /auth/me`, `/auth/csrf` | Conforme operação; limites e proteção CSRF aplicáveis |
-| Público | `GET /pub`, `/categories`, `/products`, `/products/{id}` | Visitante |
+| Público | `GET /establishment`, `/categories`, `/products`, `/products/{id}` | Visitante |
 | Disponibilidade | `GET /reservation-availability?date=&partySize=` | Visitante com limites |
 | Reservas | `POST /reservations`; `GET /me/reservations`, `/reservations/{id}`; `POST /reservations/{id}/cancel`, `/check-in`, `/reschedule` | Proprietário ou equipe conforme comando |
 | Salão | `GET /tables`, `/tabs`; `POST /tabs`, `/tabs/{id}/orders`, `/tabs/{id}/request-close`, `/tabs/{id}/close` | Equipe autorizada |
@@ -531,7 +532,7 @@ Referências ilustrativas: [webhooks](https://docs.stripe.com/webhooks) e [idemp
 
 | Cenário | Resultado exigido |
 | --- | --- |
-| Dois clientes reservam última mesa no mesmo intervalo | Uma confirmação; outro recebe conflito recuperável |
+| Dois clientes reservam última mesa no mesmo intervalo | Uma aprovação efetiva; a outra recebe conflito recuperável e permanece pendente |
 | Reserva atravessa meia-noite | Horários/exceções aplicados corretamente |
 | Equipe abre comanda em mesa ocupada | Rejeição sem criar outra visita ativa |
 | Cliente altera ID para pedido alheio | Nenhum dado privado retornado |
@@ -563,7 +564,7 @@ Backups automáticos e teste de restauração antes do uso real. Definir RPO (pe
 
 Deploy aplica migrations de forma controlada. Rollback de aplicação exige esquema compatível; alteração destrutiva precisa de plano específico. Restaurar backup após novas vendas pode perder transações e não é rollback universal.
 
-Fixar metas de desempenho após conhecer volume, dispositivos e ambiente; medir concorrência e jornadas reais. Documentar contingência para falta de internet no pub, pois o MVP não opera plenamente offline.
+Fixar metas de desempenho após conhecer volume, dispositivos e ambiente; medir concorrência e jornadas reais. Documentar contingência para falta de internet no bar, pois o MVP não opera plenamente offline.
 
 ## 13. Relatórios e definições
 
@@ -603,7 +604,7 @@ Não estimar prazo fechado antes de conhecer disponibilidade semanal e experiên
 
 ## 15. Comercialização e evolução
 
-Primeiro validar a operação do próprio Puzzle Bar. Qualidade profissional é demonstrada por uso confiável, integridade, segurança, documentação e recuperação.
+Primeiro validar a operação do próprio STEREO. Qualidade profissional é demonstrada por uso confiável, integridade, segurança, documentação e recuperação.
 
 | Modalidade | O que muda |
 | --- | --- |
@@ -623,11 +624,11 @@ Para concluir o planejamento sem bloquear o projeto, as decisões abaixo passam 
 
 | Decisão | Padrão de referência | Quando reavaliar |
 | --- | --- | --- |
-| País, idioma, moeda e fuso | Brasil, pt-BR, BRL e `America/Sao_Paulo` | Antes de publicar dados reais do pub |
-| Pedido remoto | Retirada no pub | Ao planejar E3; delivery continua fora |
+| País, idioma, moeda e fuso | Brasil, pt-BR, BRL e `America/Sao_Paulo` | Antes de publicar dados reais do bar |
+| Pedido remoto | Retirada no bar | Ao planejar E3; delivery continua fora |
 | Conta no site | Obrigatória para reservar/comprar; atendimento aceita cadastro avulso | Após observar abandono de cadastro |
 | Reserva | Duração 120 min; tolerância 15 min; antecedência mínima 2 h e máxima 60 dias | Após piloto com operação real |
-| Cancelamento de reserva | Cliente pode cancelar até 2 h antes; depois, contato com o pub | Antes de publicação |
+| Cancelamento de reserva | Cliente pode cancelar até 2 h antes; depois, contato com o bar | Antes de publicação |
 | Escolha de mesa | Sistema escolhe a menor mesa capaz de atender o grupo | Se a experiência exigir mapa para clientes |
 | Tamanho do grupo online | 1 até a capacidade da maior mesa ativa | Ao implementar junção automática |
 | Junção de mesas | Atendimento manual, fora do autoatendimento inicial | Com demanda comprovada |
@@ -637,15 +638,15 @@ Para concluir o planejamento sem bloquear o projeto, as decisões abaixo passam 
 | Estoque | Disponibilidade manual em E1–E3; ficha técnica automática em E4 | Ao iniciar E4 |
 | Conteúdo institucional | Versionado no front-end | Se equipe precisar editar sem deploy |
 | Operação | Online; sem garantia offline e sem impressão obrigatória | Antes do piloto no salão |
-| Comercialização | Validar no próprio pub antes de multitenancy | Ao chegar à E5 |
+| Comercialização | Validar no próprio bar antes de multitenancy | Ao chegar à E5 |
 
 ## 17. Especificação executável da E1
 
-Esta seção transforma site, cardápio e reservas em um recorte pronto para virar backlog. Ela não contém código nem substitui as decisões operacionais que o responsável pelo pub deve validar.
+Esta seção transforma site, cardápio e reservas em um recorte pronto para virar backlog. Ela não contém código nem substitui as decisões operacionais que o responsável pelo bar deve validar.
 
 ### 17.1 Objetivo, fronteira e atores
 
-Ao terminar E1, um visitante conhece o pub e o cardápio; um cliente cria conta, confirma seu e-mail, consulta disponibilidade, reserva e cancela dentro da regra; atendimento cria reservas avulsas, registra chegada/ausência e consulta agenda; gerente mantém produtos, categorias, horários, ambientes, mesas, equipe e parâmetros.
+Ao terminar E1, um visitante conhece o bar e o cardápio; um cliente cria conta, confirma seu e-mail, consulta disponibilidade, reserva e cancela dentro da regra; atendimento cria reservas avulsas, registra chegada/ausência e consulta agenda; gerente mantém produtos, categorias, horários, ambientes, mesas, equipe e parâmetros.
 
 E1 termina no check-in. Abertura de comanda, pedido, preparação e pagamento pertencem às entregas seguintes. O check-in da E1 apenas muda o estado da reserva; quando E2 existir, também poderá abrir a comanda.
 
@@ -665,7 +666,7 @@ E1 termina no check-in. Abertura de comanda, pedido, preparação e pagamento pe
 
 Disponibilidade gera horários discretos dentro do funcionamento do salão. Uma opção só é oferecida quando o intervalo inteiro cabe na faixa aberta, existe mesa ativa com capacidade suficiente e não há alocação ativa sobreposta. Entre mesas possíveis, escolher a menor capacidade e desempatar pelo código estável. Isso reduz desperdício de mesas grandes e deixa o resultado determinístico.
 
-Consulta de disponibilidade é apenas informativa. A confirmação repete todas as verificações em transação. O horário aceito é armazenado como instante; regras semanais e exceções são interpretadas no fuso do pub.
+Consulta de disponibilidade é apenas informativa. A aprovação pela equipe repete todas as verificações em transação e somente então aloca a mesa. O horário aceito é armazenado como instante; regras semanais e exceções são interpretadas no fuso do bar.
 
 ### 17.3 Modelo físico proposto para E1
 
@@ -692,7 +693,7 @@ Não guardar token puro. Ao redefinir senha, consumir o token atomicamente e inv
 | `tables` | `id binary(16)`, `area_id binary(16)`, `code varchar(30)`, `capacity smallint`, `active boolean`, timestamps UTC, `version bigint` | FK; capacidade positiva; UNIQUE por área/código; índice área/ativa/capacidade |
 | `table_allocations` | `id binary(16)`, `table_id binary(16)`, `starts_at datetime(6)`, `ends_at datetime(6)`, `type varchar(20)`, `active boolean`, `reason varchar(240) null`, timestamps UTC | FK; fim maior que início; índice `(table_id, active, starts_at, ends_at)` |
 | `table_allocation_slots` | `allocation_id binary(16)`, `table_id binary(16)`, `slot_start datetime(6)` | PK `(allocation_id, slot_start)`; FKs; UNIQUE `(table_id, slot_start)` garante exclusividade |
-| `reservations` | `id binary(16)`, `allocation_id binary(16)`, `customer_id binary(16) null`, `contact_name varchar(120)`, `contact_phone varchar(32)`, `party_size smallint`, `status varchar(24)`, `confirmation_code varchar(20)`, `notes varchar(500) null`, `policy_version varchar(30)`, `created_by binary(16)`, `cancelled_at datetime(6) null`, `cancellation_reason varchar(240) null`, timestamps UTC, `version bigint` | FKs; UNIQUE alocação e código; pessoas positivas; índices cliente/criação e status; consulta de agenda une alocação |
+| `reservations` | `id binary(16)`, `allocation_id binary(16) null`, `requested_start_at datetime(6)`, `requested_end_at datetime(6)`, `decision_reason varchar(240) null`, `decided_by binary(16) null`, `decided_at datetime(6) null`, `customer_id binary(16) null`, `contact_name varchar(120)`, `contact_phone varchar(32)`, `party_size smallint`, `status varchar(24)`, `confirmation_code varchar(20)`, `notes varchar(500) null`, `policy_version varchar(30)`, `created_by binary(16)`, `cancelled_at datetime(6) null`, `cancellation_reason varchar(240) null`, timestamps UTC, `version bigint` | FKs; UNIQUE alocação e código; pessoas positivas; índices cliente/criação e status; consulta de agenda une alocação |
 
 O código da mesa deve ser único em todo o estabelecimento na regra da aplicação; como a tabela referencia ambiente, isso pode ser reforçado incluindo `establishment_id` diretamente com FK composta ou validação transacional. Na versão física final, preferir a estrutura que permita a constraint direta e consultas simples.
 
@@ -716,7 +717,9 @@ Imagens ficam em armazenamento de objetos; banco guarda chave estável. Exclusã
 
 | Caso de uso | Limite transacional | Resultado |
 | --- | --- | --- |
-| Confirmar reserva | Recarregar configuração; selecionar candidatas em ordem; bloquear linha da mesa com `SELECT ... FOR UPDATE`; revalidar; inserir alocação e slots; inserir reserva; registrar auditoria/notificação | Commit único; UNIQUE dos slots decide disputa final |
+| Aprovar solicitação pendente | Validar equipe/status; recarregar configuração; selecionar candidatas em ordem; bloquear linha da mesa com `SELECT ... FOR UPDATE`; revalidar; inserir alocação e slots; atualizar reserva para CONFIRMED e vincular alocação; registrar decisão/auditoria/notificação | Commit único; UNIQUE dos slots decide disputa final |
+| Criar solicitação | Autenticar cliente; validar período/pessoas/política; salvar PENDING_APPROVAL sem alocação/slots | Proposta recebida, sem garantia de mesa |
+| Recusar solicitação | Autorizar equipe; validar PENDING_APPROVAL; registrar motivo/ator/instante; mudar para REJECTED | Sem alocação a liberar |
 | Cancelar reserva | Bloquear reserva; validar proprietário/prazo; mudar status; desativar alocação; registrar auditoria/notificação | Horário liberado junto com cancelamento |
 | Remarcar | Validar novo intervalo; criar/substituir alocação com proteção contra sobreposição; atualizar reserva e auditoria | Nunca fica com dois horários ativos |
 | Check-in | Bloquear reserva; validar estado/tolerância; mudar para CHECK_IN; registrar ator/instante | Repetição idempotente retorna estado atual |
@@ -731,7 +734,7 @@ Envio de e-mail não participa da transação de negócio. A transação grava a
 
 ```json
 {
-  "type": "https://puzzlebar.example/problems/reservation-conflict",
+  "type": "https://stereo.example/problems/reservation-conflict",
   "title": "Horário indisponível",
   "status": 409,
   "detail": "A mesa foi reservada enquanto você confirmava.",
@@ -758,7 +761,7 @@ Adotar `application/problem+json`. `detail` é seguro para o usuário; logs inte
 
 Requisitos de senha devem ser claros e compatíveis com o algoritmo; permitir gerenciadores de senha e colagem. Não impor trocas periódicas sem evidência de comprometimento. Definir limite de tamanho para evitar abuso do hash.
 
-### 18.3 Consulta e confirmação de reserva
+### 18.3 Consulta e solicitação de reserva
 
 `GET /api/v1/reservation-availability?date=2026-10-10&partySize=4`
 
@@ -795,24 +798,25 @@ Sucesso `201 Created`, com `Location: /api/v1/reservations/{id}`:
 ```json
 {
   "id": "uuid",
-  "confirmationCode": "PB7K2M",
-  "status": "CONFIRMED",
+  "requestCode": "ST7K2M",
+  "status": "PENDING_APPROVAL",
   "startsAt": "2026-10-10T19:00:00-03:00",
   "endsAt": "2026-10-10T21:00:00-03:00",
   "partySize": 4,
-  "areaName": "Salão principal",
   "canCancel": true,
-  "cancelUntil": "2026-10-10T17:00:00-03:00"
+  "cancelUntil": null
 }
 ```
 
-Não revelar código interno da mesa ao cliente antes da chegada, salvo decisão operacional posterior. Conflito concorrente retorna `409 RESERVATION_SLOT_UNAVAILABLE`. Política desatualizada retorna `409 POLICY_VERSION_CHANGED` com orientação para revisar.
+A resposta de criação indica proposta pendente; startsAt/endsAt são o período solicitado, não uma alocação. Em pendência, cancelUntil é nulo e cancelamento é permitido antes da decisão. Somente POST /reservations/{id}/approve autorizado retorna CONFIRMED e dados da alocação. POST /reservations/{id}/reject exige motivo e retorna REJECTED. Não revelar código interno da mesa ao cliente antes da chegada, salvo decisão operacional posterior. Conflito concorrente retorna `409 RESERVATION_SLOT_UNAVAILABLE`. Política desatualizada retorna `409 POLICY_VERSION_CHANGED` com orientação para revisar.
 
 ### 18.4 Comandos de reserva
 
 | Comando | Autorização | Regra | Resposta |
 | --- | --- | --- | --- |
-| `POST /reservations/{id}/cancel` | Cliente proprietário ou equipe | Cliente respeita prazo; equipe informa motivo | `200` com reserva cancelada; repetição segura |
+| `POST /reservations/{id}/approve` | Gerente/Proprietário (aprovação administrativa/moderação) | Apenas pendente; revalidar agenda e alocar em transação | `200` confirmada; `409` preserva pendência se sem capacidade |
+| `POST /reservations/{id}/reject` | Gerente/Proprietário | Apenas pendente; motivo obrigatório e decisão auditada | `200` recusada; repetição segura |
+| `POST /reservations/{id}/cancel` | Cliente proprietário ou equipe | Pendente: cliente cancela antes da decisão; confirmada: respeita prazo; equipe informa motivo | `200` com reserva cancelada; repetição segura |
 | `POST /reservations/{id}/reschedule` | Proprietário ou equipe | Revalida política e disponibilidade | `200`; `409` se indisponível |
 | `POST /reservations/{id}/check-in` | Atendimento+ | Apenas confirmada; registra ator/instante | `200`; repetição não duplica ação |
 | `POST /reservations/{id}/no-show` | Atendimento+ | Após início+tolerância; motivo opcional | `200` |
@@ -843,9 +847,9 @@ Wireframes abaixo definem hierarquia e ações, não aparência final. Component
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│ PUZZLE BAR        Cardápio  Sobre  Visite      [Reservar]   │
+│ STEREO            Cardápio  Sobre  Visite      [Reservar]   │
 ├──────────────────────────────────────────────────────────────┤
-│ Londres encontra a tradição alemã                           │
+│ Eletrohits no som. Encontros no bar.                           │
 │ Texto curto de proposta                    [Reservar mesa]   │
 │                                             [Ver cardápio]   │
 ├──────────────────────────────────────────────────────────────┤
@@ -871,11 +875,11 @@ No cardápio, cabeçalho simples, busca opcional, navegação por categorias, ca
 ├──────────────────────────────────────────────┤
 │ Etapa 3: contato, observação, política        │
 │ [ ] Li e aceito a política v1                │
-│                  [Confirmar reserva]         │
+│                  [Enviar solicitação]         │
 └──────────────────────────────────────────────┘
 ```
 
-Após confirmação, mostrar código, data/hora, número de pessoas, área, política e ação de cancelar. Em conflito, preservar dados e recarregar horários. Campo observação não promete atendimento de solicitação; mostrar isso com linguagem amigável.
+Após envio, mostrar protocolo, período solicitado, pessoas, política e estado Aguardando aprovação. Não mostrar área/mesa antes do aceite. Após aprovação, exibir confirmação; em recusa, motivo e caminho para nova proposta. Ação de cancelar segue estado/prazo. Em conflito, preservar dados e recarregar horários. Campo observação não promete atendimento de solicitação; mostrar isso com linguagem amigável.
 
 ### 19.3 Agenda operacional
 
@@ -883,8 +887,8 @@ Após confirmação, mostrar código, data/hora, número de pessoas, área, pol�
 ┌──────────────────────────────────────────────────────────────────┐
 │ Agenda  [Hoje] [◀] 10/10/2026 [▶]  Estado [Todos] [+ Reserva]   │
 ├────────┬──────────────┬─────────┬─────────┬───────────┬──────────┤
-│ 18:30  │ Ana, 2       │ Mesa 04 │ Confirm.│ PB82KM    │ [Abrir]  │
-│ 19:00  │ Bruno, 4     │ Mesa 08 │ Atraso  │ PB7K2M    │ [Abrir]  │
+│ 18:30  │ Ana, 2       │ Mesa 04 │ Confirm.│ ST82KM    │ [Abrir]  │
+│ 19:00  │ Bruno, 4     │ Mesa 08 │ Atraso  │ ST7K2M    │ [Abrir]  │
 ├────────┴──────────────┴─────────┴─────────┴───────────┴──────────┤
 │ Detalhe lateral: contato, pessoas, notas, histórico              │
 │ [Check-in] [Remarcar] [Cancelar] [Não compareceu]                │
@@ -937,8 +941,8 @@ Disponível é uma pausa operacional; ativo controla publicação permanente. A 
 - Cadastro valida campos, cria apenas CLIENT e solicita verificação sem expor senha/token.
 - Login cria sessão segura; logout invalida; recuperação não revela se o e-mail existe.
 - Cliente encontra horários apenas dentro das regras e não descobre ocupação detalhada do salão.
-- Reserva confirmada aparece imediatamente mesmo se e-mail falhar.
-- Duas confirmações concorrentes para a última mesa geram apenas uma alocação.
+- Solicitação aparece imediatamente como pendente; só aceite autorizado permite confirmação e alocação. Falha de e-mail não desfaz decisão persistida.
+- Duas aprovações concorrentes para a última mesa geram apenas uma alocação.
 - Cliente lista/consulta apenas suas reservas e cancela dentro do prazo.
 - Sessão expirada durante confirmação preserva a intenção e conduz ao login com retorno seguro.
 
@@ -974,7 +978,7 @@ Disponível é uma pausa operacional; ativo controla publicação permanente. A 
 | 5 | Identidade | Cadastro, verificação, login/logout, recuperação, sessão e papéis |
 | 6 | Estabelecimento | Configurações, horários, exceções, ambientes e mesas |
 | 7 | Disponibilidade | Cálculo de slots, escolha de mesa e testes de borda |
-| 8 | Reserva do cliente | Jornada completa, conflito concorrente, consulta e cancelamento |
+| 8 | Reserva do cliente | Jornada completa, conflito concorrente, consulta, análise/aceite/recusa e cancelamento |
 | 9 | Operação | Agenda, reserva avulsa, remarcação, check-in e ausência |
 | 10 | Notificações/auditoria | Processamento durável, retentativas, consulta e retenção |
 | 11 | Endurecimento | Segurança, acessibilidade, observabilidade, carga e restauração |
@@ -987,11 +991,11 @@ Cada item vira histórias menores antes do código. Uma história está pronta q
 O planejamento-base está concluído. A revisão humana final deve confirmar apenas fatos que a arquitetura não pode decidir sozinha:
 
 - endereço, contatos, horários reais, capacidade/identificação das mesas e acessibilidade oferecida;
-- nome final, marca, textos, fotografias e direito de uso dos materiais;
+- identidade visual do STEREO, textos, fotografias e direito de uso dos materiais;
 - cardápio inicial, preços, disponibilidade, bebidas alcoólicas e informações de alergênicos verificadas;
 - política pública de reserva/cancelamento e canal para solicitações de privacidade;
 - responsáveis que receberão papéis de proprietário/gerente no piloto;
-- infraestrutura e dispositivos disponíveis no pub.
+- infraestrutura e dispositivos disponíveis no bar.
 
 Com esses dados confirmados, o próximo trabalho é converter o backlog da E1 em tarefas e iniciar a fundação. Mudanças futuras devem atualizar primeiro este documento quando afetarem regras, dados, contratos ou segurança.
 
@@ -1000,5 +1004,15 @@ Com esses dados confirmados, o próximo trabalho é converter o backlog da E1 em
 | Data | Decisão | Motivo | Impacto |
 | --- | --- | --- | --- |
 | 04/10/2026 | Adotar MySQL 8.4 LTS com InnoDB | Escolha do autor para o banco principal do projeto | Tipos físicos adaptados; testes passam a usar MySQL; concorrência de reservas usa slots de 15 minutos com UNIQUE e bloqueios transacionais |
+| 28/10/2026 | Adotar o nome STEREO e o conceito de bar que toca eletrohits | Nova definição do autor para marca e experiência do estabelecimento | Atualizar comunicação, direção visual, catálogo de telas, wireframes e exemplos de contrato; preservar as entregas E1–E5 e as regras operacionais planejadas |
+| 28/10/2026 | Exigir aprovação manual de solicitação de reserva | Cliente propõe a visita; equipe administrativa/moderação aceita ou recusa | PENDING_APPROVAL sem alocação; aceite revalida e aloca; recusa registra motivo; protótipo local sem autenticação real |
 
-Esta decisão substitui qualquer recomendação anterior de outro banco. Uma eventual troca futura exigirá nova decisão registrada, migrations de dados, revisão de SQL, índices, bloqueios, testes e procedimentos de backup/restauração.
+A decisão sobre MySQL substitui qualquer recomendação anterior de outro banco. Uma eventual troca futura exigirá nova decisão registrada, migrations de dados, revisão de SQL, índices, bloqueios, testes e procedimentos de backup/restauração.
+
+## 24. Protótipo de visita e reserva com aprovação
+
+A decisão do autor nesta revisão substitui o fluxo anterior de confirmação automática: cliente logado propõe a visita, consulta viabilidade e aguarda aceite administrativo/moderação. Inicialmente esses comandos serão associados a Gerente/Proprietário, sem criar editor de níveis de conta. As referências a confirmação neste plano passam a significar resultado da aprovação da equipe, nunca mero envio pelo cliente. Regras de concorrência e unicidade dos slots se aplicam ao aceite efetivo.
+
+As telas `/visite` e `/reservas/nova` foram implementadas como demonstração local: acesso por perfil fictício, consulta de mesas e intervalos mockados, envio PENDING_APPROVAL e controles explícitos para simular aceite/recusa. Não há autenticação/autorização, back-end, envio real, notificações ou persistência. Estado em memória é apagado ao recarregar/sair. Endereço, horários e estrutura física reais continuam indefinidos. Agenda demonstrativa: terça a domingo, 18h–00h; mesas ativas de 2, 4, 6 e 8 lugares. Esses fixtures não definem a operação real.
+
+No banco definitivo, solicitação pendente guarda início/fim desejados; FK de alocação é nula até a aprovação. Recusa/cancelamento pendente não liberam slots porque não os criaram. Aceite transacional registra ator/instante e vincula alocação; recusa registra motivo. Prazos de resposta e notificações serão refinados antes da operação real. Ver `docs/visita-reservas.md` para o recorte implementado.

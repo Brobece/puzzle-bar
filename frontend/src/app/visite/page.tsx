@@ -1,0 +1,18 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import Image from 'next/image';
+import { SiteHeader, SiteFooter } from '../site-chrome';
+import styles from './visite.module.css';
+
+export const metadata: Metadata = { title: 'Visite — STEREO em Aracaju', description: 'Planeje seu encontro no STEREO em Aracaju. Conheça a proposta da casa e experimente a solicitação demonstrativa de uma mesa.' };
+
+export default function VisitPage() {
+  return <><a className="skip-link" href="#conteudo">Pular para o conteúdo</a><SiteHeader visit/>
+    <main id="conteudo" className={styles.page}>
+      <nav className={styles.breadcrumb} aria-label="Caminho da página"><Link href="/">Início</Link><span aria-hidden="true">/</span><span aria-current="page">Visite</span></nav>
+      <section className={styles.hero} aria-labelledby="visit-title"><div><p className={styles.kicker}>Seu próximo ponto de encontro</p><h1 id="visit-title">A noite fica<br/>melhor junto.</h1><p className={styles.lead}>Junte os amigos. A trilha é por nossa conta.</p><p className={styles.copy}>Eletrohits, uma mesa para conversar e tempo para curtir o encontro. É essa a ideia do STEREO, um novo bar em Aracaju.</p><Link className="button button-light" href="/reservas/nova">Reservar mesa <span aria-hidden="true">↗</span></Link><span className={styles.demoLabel}>Experimente o fluxo demonstrativo de solicitação.</span></div><figure><div className={styles.photo}><Image src="/images/stereo-interior.webp" alt="Ambiente conceitual do STEREO, com mesas e balcão sob iluminação violeta" fill priority sizes="(max-width: 700px) 86vw, 45vw"/></div><figcaption>Imagem conceitual. Espaço ainda em planejamento.</figcaption></figure></section>
+      <section className={styles.info} aria-label="Informações da visita"><article><span aria-hidden="true">⌖</span><h2>Aracaju, Sergipe.</h2><p>É aqui que a nossa história começa. O endereço será divulgado quando a localização estiver definida.</p><small>Endereço em breve</small></article><article><span aria-hidden="true">◷</span><h2>Tem uma noite vindo aí.</h2><p>Horários de funcionamento e data de abertura ainda serão anunciados. A agenda da demonstração não representa a operação real.</p><small>Abertura em breve</small></article><article><span aria-hidden="true">♡</span><h2>Um encontro bem recebido.</h2><p>Informações de acesso, estrutura e acessibilidade serão publicadas após a definição do espaço.</p><small>Estrutura em definição</small></article></section>
+      <section className={styles.reservation} aria-labelledby="reservation-title"><div><p className={styles.kicker}>Como funciona a solicitação</p><h2 id="reservation-title">Você escolhe a noite.<br/>A gente cuida da mesa.</h2><p>Consulte a disponibilidade para seu grupo e envie sua proposta. A reserva só será confirmada depois da aprovação da equipe.</p><Link className="text-link" href="/reservas/nova">Experimentar a reserva <span aria-hidden="true">↗</span></Link></div><ol><li><h3>Entre na sua conta</h3><p>Por enquanto, use o acesso demonstrativo. Não é necessário criar conta ou informar senha.</p></li><li><h3>Escolha pessoas, data e horário</h3><p>O site verifica se há uma mesa compatível no período escolhido.</p></li><li><h3>Aguarde a aprovação</h3><p>Enviar uma solicitação não garante a mesa. A equipe precisa aceitar a proposta.</p></li></ol></section>
+      <aside className={styles.note}><h2>Enquanto a gente prepara a casa…</h2><p>Conheça a seleção demonstrativa de drinks e porções para imaginar o próximo brinde.</p><Link className="button button-light" href="/cardapio">Ver cardápio <span aria-hidden="true">↗</span></Link></aside>
+    </main><SiteFooter/></>;
+}
