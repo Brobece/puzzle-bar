@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Keep Fast Refresh working for both local preview addresses.
+  allowedDevOrigins: ["127.0.0.1"],
   reactCompiler: true,
 };
 

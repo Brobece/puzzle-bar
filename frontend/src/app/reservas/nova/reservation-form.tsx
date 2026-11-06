@@ -1,116 +1,61 @@
 "use client";
-
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { addDays, canCancelRequest, checkAvailability, demoPolicy, findTable, formatVisitDate, interval, todayInAracaju } from '../../../lib/reservations/demo';
-import type { Allocation, ReservationRequest } from '../../../lib/reservations/demo';
+import { useDemo } from '../../workspace/provider';
+import { Feedback } from '../../workspace/ui';
+import { availableTable, canCancel, customerId, scenarioDate, statusLabels, visitError } from '../../../lib/workspace/model';
+import { formatVisitDate, timeOptions } from '../../../lib/reservations/demo';
 import styles from './reservas.module.css';
 
-const labels = { PENDING_APPROVAL: 'Aguardando aprovação', CONFIRMED: 'Confirmada na simulação', REJECTED: 'Não aprovada', CANCELLED: 'Cancelada' };
-
 export function ReservationForm() {
+  const { state, dispatch } = useDemo();
   const [loggedIn, setLoggedIn] = useState(false);
-  const [dateRange, setDateRange] = useState({ min: '', max: '' });
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState('2026-11-06');
   const [people, setPeople] = useState('4');
-  const [slots, setSlots] = useState<{ time: string; available: boolean }[] | null>(null);
+  const [queried, setQueried] = useState(false);
   const [time, setTime] = useState('');
   const [notes, setNotes] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [message, setMessage] = useState('');
-  const [requests, setRequests] = useState<ReservationRequest[]>([]);
-  const [allocations, setAllocations] = useState<(Allocation & { requestId: string })[]>([]);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
-  const [reason, setReason] = useState('');
-  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
   const resultHeading = useRef<HTMLHeadingElement>(null);
-  const current = requests.find(request => request.id === submittedId);
+  const current = state.reservations.find(item => item.id === submittedId && item.customerId === customerId);
+  const slots = queried ? timeOptions.map(option => ({ time:option, available:!!availableTable(state,{date,time:option,partySize:Number(people)}) })) : [];
+  useEffect(() => { if (current) resultHeading.current?.focus(); }, [current]);
+  function invalidate() { setQueried(false); setTime(''); setAccepted(false); setMessage(''); }
+  function resetForm() { setSubmittedId(null); setNotes(''); invalidate(); }
+  const maxDate = new Date(Date.parse(`${scenarioDate}T12:00:00Z`)+state.rules.advance*86400000).toISOString().slice(0,10);
 
-  useEffect(() => { resultHeading.current?.focus(); }, [current?.status]);
-
-  function enterDemo() {
-    const today = todayInAracaju();
-    let suggested = addDays(today, 1);
-    if (new Date(`${suggested}T12:00:00Z`).getUTCDay() === 1) suggested = addDays(suggested, 1);
-    setDateRange({ min: today, max: addDays(today, demoPolicy.maxAdvanceDays) });
-    setDate(suggested); setLoggedIn(true);
-  }
-  function invalidate() { setSlots(null); setTime(''); setAccepted(false); setMessage(''); }
-  function updateStatus(status: ReservationRequest['status']) {
-    if (!current) return;
-    setRequests(previous => previous.map(request => request.id === current.id ? { ...request, status } : request));
-    setMessage('');
-  }
-  function approve() {
-    if (!current || current.status !== 'PENDING_APPROVAL') return;
-    const table = findTable(current, allocations);
-    if (!table) { setMessage('Esse horário não está mais disponível. A solicitação continua pendente; cancele e escolha outra opção.'); return; }
-    setAllocations(previous => [...previous, { requestId: current.id, tableId: table.id, ...interval(current.date, current.time) }]);
-    updateStatus('CONFIRMED');
-  }
-  function reject() {
-    if (!current || current.status !== 'PENDING_APPROVAL') return;
-    if (!reason.trim()) { setMessage('Informe um motivo para simular a recusa.'); return; }
-    setRejectionReasons(previous => ({ ...previous, [current.id]: reason.trim() }));
-    updateStatus('REJECTED');
-  }
-  function cancel() {
-    if (!current || !['PENDING_APPROVAL', 'CONFIRMED'].includes(current.status)) return;
-    if (!canCancelRequest(current)) { setMessage('O prazo de cancelamento desta reserva terminou.'); return; }
-    setAllocations(previous => previous.filter(allocation => allocation.requestId !== current.id));
-    updateStatus('CANCELLED');
-  }
-  function newRequest() { setSubmittedId(null); invalidate(); setReason(''); setNotes(''); }
-  function leaveDemo() {
-    setLoggedIn(false); setRequests([]); setAllocations([]); setSubmittedId(null); setReason(''); setNotes(''); setRejectionReasons({}); invalidate();
-  }
-
-  return <div className={styles.layout}>
+  return <><Feedback/><div className={styles.layout}>
     <section className={styles.panel} aria-label="Solicitar uma mesa">
       <ol className={styles.steps} aria-label="Etapas da solicitação"><li aria-current={!loggedIn ? 'step' : undefined}>Acesso</li><li aria-current={loggedIn && !current ? 'step' : undefined}>Sua visita</li><li aria-current={current ? 'step' : undefined}>Aprovação</li></ol>
-      {!loggedIn ? <div className={styles.login}><span className={styles.loginIcon} aria-hidden="true">✳</span><h2>O primeiro passo<br/>é entrar.</h2><p>Para solicitar uma mesa, você precisa estar logado. Nesta prévia, use um perfil de exemplo e experimente o fluxo sem informar dados pessoais.</p><button type="button" className="button button-light" onClick={enterDemo}>Usar conta de demonstração <span aria-hidden="true">↗</span></button><small>Sem cadastro, senha ou autenticação real.</small></div> : <>
-        <div className={styles.session}><span>Perfil de demonstração</span><button type="button" onClick={leaveDemo}>Sair e limpar dados</button></div>
-        {!current ? <>
-          <form className={styles.visitForm} onSubmit={event => {
-            event.preventDefault();
-            const result = checkAvailability(date, Number(people), allocations);
-            setSlots(result.slots); setTime(''); setAccepted(false); setMessage(result.error ?? '');
-          }}>
-            <h2>Quando a gente se encontra?</h2><p className={styles.helper}>Escolha o tamanho do grupo e o dia da visita.</p>
-            <div className={styles.fields}><label>Quantidade de pessoas<input type="number" required min="1" max="20" step="1" value={people} onChange={event => { setPeople(event.target.value); invalidate(); }}/></label><label>Data da visita<input type="date" required min={dateRange.min} max={dateRange.max} value={date} onChange={event => { setDate(event.target.value); invalidate(); }}/></label></div>
-            <button type="submit" className={styles.primary}>Consultar disponibilidade</button>
-          </form>
-          {slots && slots.some(slot => slot.available) && <form className={styles.requestForm} onSubmit={event => {
-            event.preventDefault();
-            if (!loggedIn || !accepted || !time) { setMessage('Escolha um horário e aceite a condição de aprovação.'); return; }
-            if (!findTable({ date, partySize: Number(people), time }, allocations)) { setMessage('O horário deixou de estar disponível. Consulte as opções novamente.'); setTime(''); return; }
-            const id = `DEMO-${String(requests.length + 1).padStart(3, '0')}`;
-            setRequests(previous => [...previous, { id, date, time, partySize: Number(people), notes: notes.trim(), status: 'PENDING_APPROVAL' }]);
-            setSubmittedId(id); setMessage('');
-          }}>
-            <fieldset className={styles.times}><legend>Há opções para o seu grupo.</legend><p className={styles.helper}>Escolha um horário de chegada. A consulta não bloqueia a mesa.</p><div>{slots.map(slot => <label key={slot.time} className={!slot.available ? styles.timeUnavailable : ''}><input type="radio" name="arrival-time" value={slot.time} required disabled={!slot.available} checked={time === slot.time} onChange={() => { setTime(slot.time); setMessage(''); }}/><span>{slot.time}{!slot.available && <small>Indisponível</small>}</span></label>)}</div></fieldset>
-            {time && <div className={styles.review}><h3>Seu encontro</h3><p>{Number(people)} {Number(people) === 1 ? 'pessoa' : 'pessoas'} em {formatVisitDate(date)}, às {time}.</p><span>Período previsto de 2 horas, no horário de Aracaju.</span></div>}
-            <label className={styles.notes}>Observação <span>(opcional)</span><textarea maxLength={240} rows={3} value={notes} onChange={event => setNotes(event.target.value)} placeholder="Não informe dados pessoais nesta demonstração."/><small>Preferências não garantem atendimento. Até 240 caracteres.</small></label>
-            <label className={styles.consent}><input type="checkbox" required checked={accepted} onChange={event => setAccepted(event.target.checked)}/><span>Entendi que a solicitação depende da aprovação da equipe e que a consulta não garante uma mesa.</span></label>
-            <button type="submit" className={styles.primary} disabled={!time || !accepted}>Enviar solicitação</button>
-          </form>}
-        </> : <div className={styles.result}>
-          <span className={styles.status} data-status={current.status}>{labels[current.status]}</span>
-          <h2 ref={resultHeading} tabIndex={-1}>{current.status === 'PENDING_APPROVAL' ? 'Sua proposta está na fila.' : current.status === 'CONFIRMED' ? 'Mesa aceita na demonstração.' : current.status === 'REJECTED' ? 'Vamos tentar outra noite?' : 'Solicitação cancelada.'}</h2>
-          <p>{current.status === 'PENDING_APPROVAL' ? 'A solicitação foi criada neste exemplo e precisa ser aceita pela equipe. Sua mesa ainda não está confirmada.' : current.status === 'CONFIRMED' ? 'A equipe simulada aceitou a proposta e a mesa foi alocada na agenda local. Esta confirmação não representa uma reserva real.' : current.status === 'REJECTED' ? `Motivo informado na simulação: ${rejectionReasons[current.id]}` : 'Você pode consultar outra data e enviar uma nova proposta.'}</p>
-          <dl className={styles.summary}><div><dt>Protocolo de exemplo</dt><dd>{current.id}</dd></div><div><dt>Dia da visita</dt><dd>{formatVisitDate(current.date)}</dd></div><div><dt>Chegada</dt><dd>{current.time} (Aracaju)</dd></div><div><dt>Grupo</dt><dd>{current.partySize} {current.partySize === 1 ? 'pessoa' : 'pessoas'}</dd></div></dl>
-          {current.notes && <p className={styles.requestNotes}>Observação: {current.notes}</p>}
-          <div className={styles.resultActions}><button type="button" className={styles.secondary} onClick={newRequest}>Nova solicitação</button>{['PENDING_APPROVAL', 'CONFIRMED'].includes(current.status) && <button type="button" className={styles.textButton} onClick={cancel}>Cancelar solicitação</button>}</div>
-          {current.status === 'PENDING_APPROVAL' && <details className={styles.team}><summary>Simular análise da equipe</summary><p>Somente para testar a interface. Não existe controle de acesso ou painel administrativo real nesta etapa.</p><label>Motivo da recusa <span>(necessário apenas para recusar)</span><textarea maxLength={240} rows={2} value={reason} onChange={event => setReason(event.target.value)}/></label><div><button type="button" className={styles.primary} onClick={approve}>Simular aprovação</button><button type="button" className={styles.secondary} onClick={reject}>Simular recusa</button></div></details>}
+      {!loggedIn ? <div className={styles.login}><span className={styles.loginIcon} aria-hidden="true">✳</span><h2>O primeiro passo<br/>é entrar.</h2><p>No fluxo real, a solicitação exige uma conta. Nesta prévia, use o perfil fictício para experimentar a jornada compartilhada com os painéis.</p><div className={styles.accessLinks}><Link href="/entrar">Conhecer a tela de entrada</Link><Link href="/cadastro">Criar conta demonstrativa</Link><Link href="/conta">Explorar minha conta</Link></div><button type="button" className="button button-light" onClick={() => setLoggedIn(true)}>Usar conta de demonstração <span aria-hidden="true">↗</span></button><small>Sem cadastro, senha ou autenticação real.</small></div> : <>
+        <div className={styles.session}><span>{state.profile.name} · perfil fictício</span><button type="button" onClick={() => { setLoggedIn(false); resetForm(); }}>Sair desta prévia</button></div>
+        {!current ? <><form className={styles.visitForm} onSubmit={event => { event.preventDefault(); const error = visitError(state,{date,time:timeOptions[0],partySize:Number(people)}); setQueried(true); setTime(''); setAccepted(false); setMessage(error && !error.includes('período inteiro') && !error.includes('antecedência') ? error : ''); }}>
+          <h2>Quando a gente se encontra?</h2><p className={styles.helper}>Escolha o tamanho do grupo e o dia da visita.</p>
+          <div className={styles.fields}><label>Quantidade de pessoas<input type="number" required min={1} max={20} step={1} value={people} onChange={event => { setPeople(event.target.value); invalidate(); }}/></label><label>Data da visita<input type="date" required min={scenarioDate} max={maxDate} value={date} onChange={event => { setDate(event.target.value); invalidate(); }}/></label></div><button type="submit" className={styles.primary}>Consultar disponibilidade</button>
+        </form>
+        {queried && !slots.some(slot => slot.available) && <p role="status" className={styles.error}>Não há horários disponíveis para esse grupo nessa data. Verifique a quantidade de pessoas ou tente outro dia.</p>}
+        {slots.some(slot => slot.available) && <form className={styles.requestForm} onSubmit={event => {
+          event.preventDefault();
+          if (!accepted || !time || !availableTable(state,{date,time,partySize:Number(people)})) { setMessage('Revise o horário disponível e a condição de aprovação antes de enviar.'); return; }
+          const id = `DEMO-${String(state.reservations.length+1).padStart(3,'0')}`;
+          dispatch({ type:'create-reservation', visit:{date,time,partySize:Number(people)}, notes:notes.trim(), customer:true }); setSubmittedId(id); setMessage('');
+        }}>
+          <fieldset className={styles.times}><legend>Há opções para o seu grupo.</legend><p className={styles.helper}>A consulta não bloqueia mesa. O aceite precisa ser feito pela equipe.</p><div>{slots.map(slot => <label key={slot.time} className={!slot.available ? styles.timeUnavailable : ''}><input type="radio" name="arrival-time" value={slot.time} required disabled={!slot.available} checked={time === slot.time} onChange={() => { setTime(slot.time); setMessage(''); }}/><span>{slot.time}{!slot.available && <small>Indisponível</small>}</span></label>)}</div></fieldset>
+          {time && <div className={styles.review}><h3>Seu encontro</h3><p>{people} pessoas em {formatVisitDate(date)}, às {time}.</p><span>{state.rules.duration} minutos previstos · versão demo-approval-v{state.rules.version}.</span></div>}
+          <label className={styles.notes}>Observação <span>(opcional)</span><textarea maxLength={240} rows={3} value={notes} onChange={event => setNotes(event.target.value)} placeholder="Não informe dados pessoais nesta demonstração."/></label>
+          <label className={styles.consent}><input type="checkbox" required checked={accepted} onChange={event => setAccepted(event.target.checked)}/><span>Entendi que a solicitação depende da aprovação da equipe e que a consulta não garante uma mesa.</span></label>
+          <p className={styles.policyLink}><Link href="/politicas/reservas" target="_blank" rel="noopener noreferrer">Leia a política-base de reservas (abre em outra aba)</Link>. Alterações gerenciais do cenário não publicam uma nova política.</p>
+          <button type="submit" className={styles.primary} disabled={!time || !accepted}>Enviar solicitação</button>
+        </form>}</> : <div className={styles.result}>
+          <span className={styles.status} data-status={current.status}>{statusLabels[current.status]}</span><h2 ref={resultHeading} tabIndex={-1}>{current.status === 'PENDING_APPROVAL' ? 'Sua proposta está na fila.' : 'Seu encontro, atualizado.'}</h2><p>Esta solicitação faz parte do cenário local. A equipe pode aceitar ou recusar no painel de operação. Acompanhe o resultado em sua conta; nenhuma reserva real foi enviada.</p>
+          <dl className={styles.summary}><div><dt>Protocolo fictício</dt><dd>{current.id}</dd></div><div><dt>Data e horário</dt><dd>{formatVisitDate(current.date)} · {current.time}</dd></div><div><dt>Grupo</dt><dd>{current.partySize} pessoas</dd></div><div><dt>Estado</dt><dd>{statusLabels[current.status]}</dd></div></dl>
+          <div className={styles.resultActions}><Link className={styles.primary} href={`/conta/reservas/${current.id}`}>Acompanhar na minha conta</Link><button type="button" className={styles.secondary} onClick={resetForm}>Nova solicitação</button>{canCancel(current) && <button type="button" className={styles.textButton} onClick={() => dispatch({ type:'reservation', id:current.id, action:'cancel', customer:true })}>Cancelar solicitação</button>}</div>
+          <div className={styles.team}><p>Para experimentar a análise da equipe, use o painel demonstrativo.</p><Link className="text-link" href={`/operacao/reservas/${current.id}`}>Abrir análise da equipe <span aria-hidden="true">↗</span></Link></div>
         </div>}
-        {requests.length > 1 && <details className={styles.history}><summary>Solicitações desta sessão ({requests.length})</summary><ul>{requests.map(request => <li key={request.id}><span>{request.id} / {formatVisitDate(request.date)} às {request.time}</span><strong>{labels[request.status]}</strong></li>)}</ul></details>}
-      </>}
-      {message && <p role="alert" className={styles.error}>{message}</p>}
+      </>}{message && <p role="alert" className={styles.error}>{message}</p>}
     </section>
-    <aside className={styles.sidebar}>
-      <div><span className={styles.sidebarSymbol} aria-hidden="true">✳</span><h2>A mesa vem depois<br/>do aceite.</h2><p>Uma opção disponível permite enviar a proposta. A equipe confere a agenda e só então confirma a reserva.</p></div>
-      <details className={styles.policy} open><summary>Regras desta demonstração</summary><ul><li>Mesas para grupos de até 8 pessoas, sem junção automática.</li><li>Terça a domingo, das 18h à meia-noite. São horários fictícios para testar a interface.</li><li>Visitas com duração de 2 horas e antecedência mínima de 2 horas.</li><li>Solicitações para até 60 dias à frente, no fuso de Aracaju.</li><li>Solicitações pendentes não bloqueiam mesas. A aprovação verifica a disponibilidade novamente.</li><li>Cancelamento de reserva aprovada até 2 horas antes; pendente pode ser cancelada antes do aceite.</li></ul></details>
-      <Link className="text-link" href="/visite">Conheça a proposta da visita <span aria-hidden="true">↗</span></Link>
-    </aside>
-  </div>;
+    <aside className={styles.sidebar}><div><span className={styles.sidebarSymbol} aria-hidden="true">✳</span><h2>A mesa vem depois<br/>do aceite.</h2><p>Os painéis compartilham dados enquanto você navega pelos links. Recarregar ou reiniciar o cenário descarta as alterações.</p></div><details className={styles.policy} open><summary>Regras do cenário compartilhado</summary><ul><li>Relógio fixo: 05/11/2026 às 18h30, no horário de Aracaju.</li><li>Duração: {state.rules.duration} min. Antecedência mínima: {state.rules.notice} min.</li><li>Solicitações para até {state.rules.advance} dias à frente.</li><li>Cancelamento de confirmação até {state.rules.cancelNotice} min antes. Pendentes podem ser canceladas antes da decisão.</li><li>Agenda, regras e mesas podem ser editadas na gestão demonstrativa.</li></ul></details><p className={styles.policyLink}><Link href="/politicas/reservas" target="_blank" rel="noopener noreferrer">Política-base demonstrativa (outra aba)</Link></p><Link className="text-link" href="/conta/reservas">Minhas reservas <span aria-hidden="true">↗</span></Link></aside>
+  </div></>;
 }

@@ -2,7 +2,7 @@
 
 ## Referência e escopo
 
-Baseado no planejamento, seções 6.3 (modelo lógico), 17.3 (modelo físico), 8.1 (P03/P04) e 20.1 (publicação e disponibilidade). Página de consulta em `/cardapio`, sem back-end, pedidos ou carrinho. Os detalhes abrem em diálogo acessível; a rota própria `/cardapio/[slug]` continua pendente. Produtos, preços, receitas, alergênicos e imagens são exemplos fictícios, explicitados na interface.
+Baseado no planejamento, seções 6.3 (modelo lógico), 17.3 (modelo físico), 8.1 (P03/P04) e 20.1 (publicação e disponibilidade). Páginas de consulta em `/cardapio` e `/cardapio/[slug]`, sem back-end, pedidos ou carrinho. Cada cartão oferece acesso à página individual e uma prévia rápida em diálogo acessível. Produtos, preços, receitas, alergênicos e imagens são exemplos fictícios, explicitados na interface.
 
 ## Modelo dos mocks
 
@@ -29,6 +29,16 @@ Tipos em `frontend/src/lib/catalog/types.ts`; fixtures em `mock-data.ts`; montag
 - Diálogo apresenta descrição completa, preço, disponibilidade e avisos. Fecha por botão, Escape ou clique no fundo e devolve foco ao acionador.
 - Imagens SVG locais ilustrativas em `frontend/public/images/menu/`, criadas em código. Sem dependência de URLs externas.
 - Sem adicionais/opções ainda: grupo_opcao e opcao_produto pertencem à E2 no planejamento. Sem carrinho/pagamento (E3).
+
+## Página individual de produto (P04 — E1)
+
+Implementada em `/cardapio/[slug]`, por exemplo `/cardapio/neon-tonica`. Reutiliza `getPublicCatalog()` por meio de `getPublicProduct(slug)`, sem duplicar fixtures. Produtos inativos, categorias inativas e slugs inexistentes acionam `notFound()` com uma tela própria e link de retorno; produtos ativos indisponíveis continuam públicos, com aviso explícito.
+
+Apresenta imagens ordenadas (ou fallback sem imagem), categoria, nome, descrição, preço em BRL, disponibilidade, indicação de bebida alcoólica e associações explícitas de alergênicos. Sem associações, informa que os dados não foram cadastrados, sem declarar ausência de alergênicos. Sugestões da mesma categoria usam apenas produtos públicos, excluindo o atual. Cabeçalho/rodapé compartilhados, breadcrumb, link para pular conteúdo e retorno ao cardápio. Layout em duas colunas no desktop e empilhado no celular.
+
+As 11 páginas públicas são pré-renderizadas a partir dos mocks, com título e descrição por produto. Adicionais e carrinho continuam nas entregas futuras previstas no planejamento.
+
+Validação da P04: lint, TypeScript e build aprovados; respostas HTTP 200 para Neon Tônica, Mini Burgers e Sunset Spritz (indisponível), e 404 para produto arquivado, categoria inativa e slug inexistente. Revisão visual em desktop e celular de 390 px, navegação entre cardápio/produto e prévia rápida com Escape e retorno de foco verificadas no navegador.
 
 ## Direção e validação
 

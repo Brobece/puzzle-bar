@@ -2,41 +2,24 @@
 
 ## Telas
 
-- `/visite`: proposta da visita em Aracaju, imagem conceitual, informações reais ainda em definição e acesso à solicitação de mesa. Não inventa endereço, contato, mapa, acessibilidade nem horários reais.
-- `/reservas/nova`: acesso demonstrativo, formulário de grupo/data, consulta de horários, revisão e solicitação pendente. Apresenta cancelamento e controles explícitos de simulação do aceite/recusa da equipe.
+- `/visite`: proposta da visita em Aracaju, imagem conceitual e informações reais em definição. Não inventa endereço, contato, mapa ou acessibilidade.
+- `/reservas/nova`: acionador de perfil fictício, formulário de pessoas/data/horário, consulta de disponibilidade e envio de proposta pendente ao cenário compartilhado.
+- `/politicas/reservas`: política-base demonstrativa P07, com índice, versão `demo-approval-v1` e atualização editorial em 05/11/2026.
+- `/conta/reservas` e detalhe: acompanhamento do cliente.
+- `/operacao/reservas` e detalhe: análise, aprovação/recusa, remarcação, cancelamento e chegada/ausência pela equipe simulada.
 
-Preserva cores, tipografia, cabeçalho/rodapé e menu animado do STEREO. Home e navegação compartilhada apontam às novas rotas. Layout de reserva com formulário à esquerda e regras à direita; as colunas se empilham no celular. Visite combina texto e imagem do ambiente com recorte em arco.
+## Cenário compartilhado
 
-## Decisão de negócio
+Detalhes em `docs/paineis-e1.md`. O provider raiz mantém os dados em memória enquanto se navega pelos links. Recarregar, abrir outra aba ou reiniciar o cenário restaura os fixtures. Nada é enviado ao bar; não há conta real, API, banco, notificações ou controle de acesso real.
 
-O autor alterou o fluxo: reserva depende de conta e aprovação administrativa/moderação, em vez de confirmação automática. A disponibilidade é informativa. O envio cria `PENDING_APPROVAL`; só o aceite verifica novamente e aloca mesa/intervalo, retornando `CONFIRMED`. Recusa produz `REJECTED` e exige motivo. Cliente pode cancelar, gerando `CANCELLED`.
+Relógio fixo: 05/11/2026 às 18h30 em Aracaju. A consulta usa agenda, capacidade, regras, bloqueios e alocações do reducer compartilhado. A biblioteca `src/lib/reservations/demo.ts` permanece como referência do protótipo anterior e de formatação; as ações atuais usam `src/lib/workspace/model.ts`.
 
-Pendências não retêm capacidade. Propostas concorrentes podem existir; o aceite precisa repetir a consulta e usar transação/constraints no back-end futuro. No modelo definitivo, período desejado pertence à proposta e a FK de alocação é nula até a confirmação. Gerente/Proprietário são o mapeamento inicial proposto para o aceite, sem construir novos níveis/editor de permissões nesta entrega.
+Solicitar não bloqueia mesa. Aprovar revalida e aloca, recusar exige motivo; cancelar e remarcar seguem regras demonstrativas. A janela padrão continua de 60 dias, duração de 120 min, antecedência/cancelamento de 120 min e tolerância de 15 min. O editor de gestão pode versionar regras do cenário. Duração, tolerância e cancelamento de solicitações anteriores são preservados.
 
-## Recorte local implementado
+## Links e política pública
 
-Não há conta real, senhas, autenticação, permissões, API, banco, persistência ou notificações. O botão de acesso ativa um perfil fictício nesta página. Estado fica em memória do React e é apagado ao recarregar ou sair; navegação para outra página também descarta o formulário. Não são solicitados nome, telefone ou e-mail reais.
-
-A seção “Simular análise da equipe” está disponível deliberadamente ao demonstrador para validar a interface. Não representa controle de acesso ou painel de produção. A interface diferencia sempre envio, aprovação e demonstração.
-
-## Fixtures e cálculo
-
-Regras em `frontend/src/lib/reservations/demo.ts`:
-
-- Mesas ativas com capacidades 2, 4, 6 e 8; uma mesa de 12 inativa verifica exclusão por estado.
-- Agenda fictícia de terça a domingo, 18h–00h; segunda fechada. Esses horários são apenas para testar e não definem a operação do bar.
-- Slots de chegada a cada 30 min, 18h–22h, com duração de 120 min; último intervalo termina à meia-noite seguinte.
-- Antecedência mínima de 2 horas e limite de 60 dias no fuso `America/Sao_Paulo`. Instantes dos fixtures usam o offset -03:00; integração futura deverá derivá-los da configuração IANA do estabelecimento.
-- Bloqueios mockados para demonstrar indisponibilidade. Comparação por intervalos semiabertos `[início, fim)`, sem sobreposição nos limites exatos.
-- Escolha da menor mesa ativa com capacidade suficiente, desempate por ID; sem junção automática.
-- Consultar/enviar não aloca. Aceitar revalida e adiciona uma alocação local; cancelar confirmação a remove, se dentro do prazo. Pendente pode ser cancelada antes da decisão.
-- Edição de pessoas/data invalida a consulta e o horário selecionado. Envio exige opção válida e aceite da condição de aprovação.
-- Protocolos DEMO são identificadores locais, não códigos de reserva reais. Motivo de recusa é obrigatório. Estados finais não permitem repetir aceite/recusa.
-
-## Validação
-
-Lint, TypeScript e build. Verificações de regras: capacidade, mesa inativa, data inválida/passada/fora da janela, dia fechado, antecedência, limites dos intervalos, virada de dia, conflito entre aprovações e cancelamento. No navegador: bloqueio por acesso demonstrativo, grupo acima da capacidade, consulta, seleção, consentimento, envio pendente, aprovação, cancelamento/liberação, nova proposta, recusa com motivo obrigatório e revisão responsiva.
+Política acessível no rodapé, em Visite e junto ao consentimento/regras da reserva. Links da reserva abrem em outra aba com aviso; essa nova aba tem seu próprio cenário inicial. A política-base pública não é republicada pelo editor gerencial. Reserva e painéis explicam essa diferença.
 
 ## Pendências para operação real
 
-Autenticação e sessão no servidor; dados de contato e política pública; API e banco; autorização e auditoria de decisões; revalidação transacional e idempotência; gestão de calendário/exceções; notificações e acompanhamento de solicitações em conta própria. Prazo de análise e dados reais do estabelecimento devem ser definidos antes de publicar reservas reais.
+Autenticação/sessão, API/MySQL, autorização, transações/idempotência, notificações e auditoria durável. Dados reais e prazo de análise ainda indefinidos. Múltiplas faixas de funcionamento e operação comercial de mesas exigem as integrações previstas nas próximas entregas.

@@ -1,0 +1,59 @@
+.page { width: 84%; margin: 0 auto; }
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 13px; padding-top: 32px; color: var(--muted); font-size: 12px; }
+.breadcrumb [aria-current] { color: var(--paper); }
+.breadcrumb a:hover { color: var(--lavender); }
+.intro { padding: 55px 0 34px; }
+.intro h1 { font: 600 clamp(42px, 5.3vw, 78px)/1.08 var(--font-display), sans-serif; letter-spacing: -.04em; color: var(--lavender); }
+.intro > p:last-of-type { font-size: 16px; color: var(--muted); max-width: 510px; margin-top: 24px; }
+.version { display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 12px; color: var(--muted); margin-top: 28px; }
+.notice { display: flex; align-items: flex-start; gap: 20px; padding: 22px 26px; background: #1d223b; border-radius: 6px; }
+.notice > span { font-size: 34px; line-height: 1; color: var(--pink); }
+.notice strong { font-size: 14px; font-weight: 600; }
+.notice p { color: #bcbdd0; font-size: 13px; max-width: 760px; margin-top: 7px; }
+.layout { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 2fr); gap: 9%; padding: 55px 0 65px; align-items: start; }
+.index { position: sticky; top: 30px; }
+.index > p { font-size: 13px; font-weight: 600; }
+.index ol { padding: 0; margin: 20px 0 22px; list-style: none; }
+.index li { border-bottom: 1px solid #ffffff15; }
+.index li a { display: flex; align-items: baseline; gap: 13px; padding: 13px 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.index li a:hover { color: var(--lavender); }
+.index :global(.text-link) { font-size: 12px; gap: 14px; }
+.content { min-width: 0; }
+.content section { padding-bottom: 35px; margin-bottom: 35px; border-bottom: 1px solid #ffffff20; scroll-margin-top: 30px; }
+.content section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
+.content h2 { font-size: clamp(27px, 3vw, 38px); margin-bottom: 22px; }
+.content section > p, .content li { font-size: 14px; line-height: 1.9; color: #bcbdd0; }
+.content section > p + p { margin-top: 16px; }
+.content strong { font-weight: 600; color: var(--paper); }
+.content ul { padding-left: 19px; margin: 0 0 18px; }
+.content li { padding-left: 5px; margin-bottom: 13px; }
+.content li::marker { color: var(--lavender); }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; padding: 24px; background: var(--surface); border: 1px solid #ffffff15; border-radius: 6px; margin: 0 0 24px; }
+.facts dt { color: var(--muted); font-size: 12px; margin-bottom: 9px; }
+.facts dd { color: var(--lavender); font-family: var(--font-display), sans-serif; font-weight: 600; font-size: 23px; line-height: 1.2; margin: 0; }
+.reference { overflow-wrap: anywhere; }
+.invite { padding: 50px 24px; margin-bottom: 60px; background: #1d223b; border-radius: 6px; text-align: center; }
+.invite h2 { font-size: clamp(32px, 4vw, 52px); }
+.invite > p { font-size: 14px; color: var(--muted); margin: 22px auto; max-width: 400px; }
+.invite > div { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px 25px; }
+@media (max-width: 1100px) { .page { width: 88%; } .layout { gap: 6%; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); } }
+@media (max-width: 800px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 38px; padding-top: 35px; } .index { position: static; } .index ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; } }
+@media (max-width: 500px) {
+  .page { width: 86%; }
+  .breadcrumb { padding-top: 24px; }
+  .intro { padding-top: 35px; }
+  .intro h1 { font-size: clamp(34px, 9vw, 44px); }
+  .intro > p:last-of-type { font-size: 14px; }
+  .notice { padding: 18px; gap: 13px; }
+  .notice > span { font-size: 26px; }
+  .notice strong { font-size: 13px; }
+  .notice p { font-size: 12px; }
+  .index ol { grid-template-columns: minmax(0, 1fr); }
+  .facts { padding: 18px; gap: 24px 16px; }
+  .facts dt { font-size: 12px; }
+  .facts dd { font-size: 20px; }
+  .content h2 { font-size: 29px; }
+  .content section > p, .content li { font-size: 13px; }
+  .invite { margin-bottom: 40px; padding: 35px 18px; }
+  .invite :global(.text-link) { font-size: 12px; gap: 12px; }
+}

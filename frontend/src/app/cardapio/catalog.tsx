@@ -1,6 +1,7 @@
 "use client";
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 import type { CatalogProduct, PublicCatalog } from '../../lib/catalog/types';
 import styles from './cardapio.module.css';
@@ -41,7 +42,7 @@ export function Catalog({ catalog }: { catalog: PublicCatalog }) {
     <div className={styles.resultBar}><p role="status">{results.length} {results.length === 1 ? 'produto encontrado' : 'produtos encontrados'}</p><div><label className={styles.availableFilter}><input type="checkbox" checked={onlyAvailable} onChange={event => setOnlyAvailable(event.target.checked)}/>Somente disponíveis</label>{hasFilters && <button type="button" className={styles.clear} onClick={resetFilters}>Limpar filtros</button>}</div></div>
     {results.length ? <ul className={styles.grid}>{results.map(product => <li className={styles.card} key={product.id}>
       <div className={`${styles.artwork} ${!product.available ? styles.unavailableArtwork : ''}`}><ProductArtwork product={product}/>{!product.available && <span className={styles.unavailable}>Indisponível no momento</span>}</div>
-      <div className={styles.cardBody}><div className={styles.productMeta}><span>{product.category.name}</span>{product.alcoholic && <span>Com álcool</span>}</div><div className={styles.productTitle}><h2>{product.name}</h2><span className={styles.price}>{currency.format(Number(product.price))}</span></div><p className={styles.description}>{product.description}</p><button type="button" className={styles.detailsButton} aria-label={`Ver detalhes de ${product.name}`} onClick={() => openProduct(product)}>Ver detalhes <span aria-hidden="true">↗</span></button></div>
+      <div className={styles.cardBody}><div className={styles.productMeta}><span>{product.category.name}</span>{product.alcoholic && <span>Com álcool</span>}</div><div className={styles.productTitle}><h2>{product.name}</h2><span className={styles.price}>{currency.format(Number(product.price))}</span></div><p className={styles.description}>{product.description}</p><Link className={styles.detailsButton} href={`/cardapio/${product.slug}`} aria-label={`Ver detalhes de ${product.name}`}>Ver detalhes <span aria-hidden="true">↗</span></Link><button type="button" className={styles.quickView} aria-label={`Prévia rápida de ${product.name}`} onClick={() => openProduct(product)}>Prévia rápida</button></div>
     </li>)}</ul> : <div className={styles.empty}><h2>Nenhum produto por aqui.</h2><p>Tente outro nome ou ingrediente, ou limpe os filtros para ver todo o cardápio.</p><button type="button" className="button button-light" onClick={resetFilters}>Ver todo o cardápio</button></div>}
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="product-name" onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }}>
       <div className={styles.dialogContent}>

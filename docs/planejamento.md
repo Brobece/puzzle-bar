@@ -2,8 +2,8 @@
 
 - **Versão:** 1.3 — Reservas com solicitação e aprovação manual da equipe.
 - **Data:** 28/10/2026.
-- **Entrega atual:** planejamento documentado e projetos-base de front-end/back-end criados; home e página Sobre institucionais implementadas; cardápio público com dados mockados e detalhes em diálogo; Visite e solicitação de mesa com acesso/análise demonstrativos locais; integrações e autenticação reais pendentes.
-- **Estado:** E1 em implementação de interfaces com dados demonstrativos; autenticação, integrações e regras no servidor ainda pendentes.
+- **Entrega atual:** planejamento documentado e projetos-base de front-end/back-end criados; home e página Sobre institucionais implementadas; cardápio público com dados mockados, prévia em diálogo e página individual de produto; Visite e solicitação de mesa com acesso/análise demonstrativos locais; política demonstrativa de reservas com links no fluxo e rodapé; painéis de cliente, operação, gestão e dados pessoais com cenário compartilhado em memória (ver `docs/paineis-e1.md`); integrações e autenticação reais pendentes.
+- **Estado:** E1 em implementação de interfaces com dados demonstrativos, incluindo cadastro e entrada (A01/A02); autenticação, integrações e regras no servidor ainda pendentes. Ver `docs/cadastro-acesso.md` para critérios e limites das telas de acesso.
 
 ## 1. Visão do produto
 
@@ -1013,6 +1013,6 @@ A decisão sobre MySQL substitui qualquer recomendação anterior de outro banco
 
 A decisão do autor nesta revisão substitui o fluxo anterior de confirmação automática: cliente logado propõe a visita, consulta viabilidade e aguarda aceite administrativo/moderação. Inicialmente esses comandos serão associados a Gerente/Proprietário, sem criar editor de níveis de conta. As referências a confirmação neste plano passam a significar resultado da aprovação da equipe, nunca mero envio pelo cliente. Regras de concorrência e unicidade dos slots se aplicam ao aceite efetivo.
 
-As telas `/visite` e `/reservas/nova` foram implementadas como demonstração local: acesso por perfil fictício, consulta de mesas e intervalos mockados, envio PENDING_APPROVAL e controles explícitos para simular aceite/recusa. Não há autenticação/autorização, back-end, envio real, notificações ou persistência. Estado em memória é apagado ao recarregar/sair. Endereço, horários e estrutura física reais continuam indefinidos. Agenda demonstrativa: terça a domingo, 18h–00h; mesas ativas de 2, 4, 6 e 8 lugares. Esses fixtures não definem a operação real.
+As telas `/visite` e `/reservas/nova` foram implementadas como demonstração local: acesso por perfil fictício, consulta de mesas e intervalos mockados, envio PENDING_APPROVAL e painel de operação separado para simular aceite/recusa e chegada. Não há autenticação/autorização, back-end, envio real, notificações ou persistência. O cenário compartilhado em memória é restaurado ao recarregar ou reiniciar; navegação pelos links preserva os dados. Ver `docs/paineis-e1.md` para os painéis e as regras locais atuais. Endereço, horários e estrutura física reais continuam indefinidos. Agenda demonstrativa: terça a domingo, 18h–00h; mesas ativas de 2, 4, 6 e 8 lugares. Esses fixtures não definem a operação real.
 
 No banco definitivo, solicitação pendente guarda início/fim desejados; FK de alocação é nula até a aprovação. Recusa/cancelamento pendente não liberam slots porque não os criaram. Aceite transacional registra ator/instante e vincula alocação; recusa registra motivo. Prazos de resposta e notificações serão refinados antes da operação real. Ver `docs/visita-reservas.md` para o recorte implementado.

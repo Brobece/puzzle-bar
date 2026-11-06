@@ -25,7 +25,7 @@ Estrutura escolhida: marca ampla sobre cena do ambiente, textos alinhados à esq
 
 Navegação por âncoras, menu móvel com botão acessível, vinil com giro de 800 ms e painel com transição de opacidade e deslocamento na entrada e na saída e seletor musical com três estados em React; sem reprodução de áudio. Layout responsivo, foco visível, link de pular conteúdo, idioma pt-BR, títulos semânticos e rolagem sem animação quando há preferência por movimento reduzido; por solicitação explícita do autor, as transições acionadas pelo clique no menu permanecem ativas. Lint e compilação com Webpack; Turbopack apresentou falha de subprocesso neste ambiente, portanto os scripts usam Webpack.
 
-O cardápio, as reservas e a programação ainda precisam de telas próprias e integração. O texto atual explicita a preparação da casa. A P01 é uma primeira versão institucional, não a conclusão funcional da E1.
+O cardápio (incluindo página individual de produto), Visite e solicitação de reserva já possuem telas demonstrativas próprias; as integrações reais continuam pendentes. A programação permanece como seção institucional, com escopo futuro a definir. O texto atual explicita a preparação da casa. A P01 é uma primeira versão institucional, não a conclusão funcional da E1.
 
 ## Imagem conceitual
 

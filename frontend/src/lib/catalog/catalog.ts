@@ -16,3 +16,7 @@ export function getPublicCatalog(): PublicCatalog {
     })));
   return { categories: visibleCategories, products: visibleProducts };
 }
+
+export function getPublicProduct(slug: string) {
+  return getPublicCatalog().products.find(product => product.slug === slug);
+}

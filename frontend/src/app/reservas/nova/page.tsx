@@ -10,7 +10,7 @@ export default function ReservationPage() {
     <main id="conteudo" className={styles.page}>
       <nav className={styles.breadcrumb} aria-label="Caminho da página"><Link href="/">Início</Link><span aria-hidden="true">/</span><Link href="/visite">Visite</Link><span aria-hidden="true">/</span><span aria-current="page">Reservar mesa</span></nav>
       <header className={styles.intro}><p>Tem lugar para o seu encontro.</p><h1>Escolha a noite.<br/>Reúna sua turma.</h1><p>Consulte as opções e envie sua solicitação.<br/>A equipe aprova antes de confirmar a mesa.</p></header>
-      <div className={styles.notice}><strong>Modo de demonstração.</strong> Sem conta real ou envio para o bar. Os dados ficam apenas nesta página e são apagados ao recarregar.</div>
+      <div className={styles.notice}><strong>Modo de demonstração.</strong> Sem conta real ou envio para o bar. Os dados são compartilhados entre os painéis nesta navegação e apagados ao recarregar.</div>
       <ReservationForm/>
     </main><SiteFooter/></>;
 }

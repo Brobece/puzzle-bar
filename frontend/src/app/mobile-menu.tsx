@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 
-export function MobileMenu({ about = false, menu = false, visit = false, reserve = false }: { about?: boolean; menu?: boolean; visit?: boolean; reserve?: boolean }) {
+export function MobileMenu({ about = false, menu = false, visit = false, reserve = false, access = false }: { about?: boolean; menu?: boolean; visit?: boolean; reserve?: boolean; access?: boolean }) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
 
@@ -32,6 +32,9 @@ export function MobileMenu({ about = false, menu = false, visit = false, reserve
       <Link href="/#agenda">Convidados</Link>
       <Link href="/visite" aria-current={visit ? 'page' : undefined}>Visite</Link>
       <Link href="/reservas/nova" aria-current={reserve ? 'page' : undefined}>Reservar mesa</Link>
+      <Link href="/entrar" aria-current={access ? 'page' : undefined}>Entrar</Link>
+      <Link href="/cadastro">Criar conta</Link>
+      <Link href="/conta">Minha conta demonstrativa</Link>
     </nav>
   </div>;
 }
