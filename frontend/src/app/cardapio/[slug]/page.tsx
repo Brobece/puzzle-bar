@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublicCatalog, getPublicProduct } from '../../../lib/catalog/catalog';
 import { SiteHeader, SiteFooter } from '../../site-chrome';
+import { ProductPurchase } from '../../commerce/shop';
+import { CommerceFeedback } from '../../commerce/ui';
 import styles from './produto.module.css';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -55,11 +57,11 @@ export default async function ProductPage({ params }: Props) {
           </div>
           <p className={styles.description}>{product.description}</p>
           <div className={styles.priceBlock}><p className={styles.price}>{currency.format(Number(product.price))}</p><span>Preço demonstrativo</span></div>
-          <section className={styles.allergens} aria-labelledby="alergenicos">
+          <CommerceFeedback/><ProductPurchase productId={product.id}/><section className={styles.allergens} aria-labelledby="alergenicos">
             <h2 id="alergenicos">Informações alimentares</h2>
             {product.allergens.length ? <ul>{product.allergens.map(allergen => <li key={`${allergen.id}-${allergen.noticeType}`}><strong>{allergen.noticeType === 'CONTAINS' ? 'Contém' : 'Pode conter'}:</strong> {allergen.name}</li>)}</ul> : <p>Informações de alergênicos não cadastradas neste exemplo. Isso não indica ausência de alergênicos.</p>}
           </section>
-          <aside className={styles.notice} aria-label="Cardápio demonstrativo"><strong>Por enquanto, é só um gostinho.</strong><p>Produto, preço, receita e informações alimentares são fictícios. A seleção final da casa será anunciada em breve. Pedidos ainda não estão disponíveis.</p></aside>
+          <aside className={styles.notice} aria-label="Cardápio demonstrativo"><strong>Por enquanto, é só um gostinho.</strong><p>Produto, preço, receita e informações alimentares são fictícios. A seleção final da casa será anunciada em breve. Compras podem ser experimentadas no cenário demonstrativo, sem cobrança ou envio real.</p></aside>
           <Link className="text-link" href="/cardapio"><span aria-hidden="true">←</span> Voltar ao cardápio</Link>
         </div>
       </article>

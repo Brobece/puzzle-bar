@@ -5,23 +5,23 @@ import type { Product, Category } from '../catalog/types';
 export const scenarioDate = '2026-11-05';
 export const scenarioNow = '2026-11-05T18:30:00-03:00';
 export const customerId = 'cliente-demo';
-export type Role = 'Atendimento' | 'Gerente' | 'Proprietário' | 'Preparação';
-export type Status = 'PENDING_APPROVAL' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED' | 'CHECK_IN' | 'NO_SHOW';
-export const statusLabels: Record<Status, string> = { PENDING_APPROVAL: 'Aguardando aprovação', CONFIRMED: 'Confirmada', REJECTED: 'Recusada', CANCELLED: 'Cancelada', CHECK_IN: 'Chegada registrada', NO_SHOW: 'Não compareceu' };
+export type Role = 'Caixa' | 'Atendimento' | 'Gerente' | 'Proprietário' | 'Preparação';
+export type Status = 'PENDING_APPROVAL' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED' | 'CHECK_IN' | 'NO_SHOW' | 'COMPLETED';
+export const statusLabels: Record<Status, string> = { PENDING_APPROVAL: 'Aguardando aprovação', CONFIRMED: 'Confirmada', REJECTED: 'Recusada', CANCELLED: 'Cancelada', CHECK_IN: 'Chegada registrada', NO_SHOW: 'Não compareceu', COMPLETED: 'Visita concluída' };
 export type Visit = { date: string; time: string; partySize: number };
 export type Reservation = Visit & { id: string; customerId: string; name: string; email: string; phone: string; notes: string; status: Status; tableId?: string; reason?: string; duration: number; cancelNotice: number; tolerance: number; policyVersion: string; history: string[] };
 export type Room = { id: string; name: string; active: boolean };
 export type Table = { id: string; code: string; roomId: string; capacity: number; active: boolean };
 export type Block = { id: string; tableId: string; date: string; time: string; end: string; reason: string };
 export type Rules = { duration: number; notice: number; advance: number; cancelNotice: number; tolerance: number; version: number };
-export type Hours = { day: number; open: boolean; start: string; end: string; nextDay: boolean };
+export type Hours = { day: number; open: boolean; start: string; end: string; nextDay: boolean; ranges?: { start: string; end: string; nextDay: boolean }[] };
 export type Exception = { date: string; closed: boolean; start: string; end: string; nextDay: boolean; reason: string };
 export type Member = { id: string; name: string; email: string; role: Role; active: boolean };
 export type ManagedProduct = Product & { image: string; alt: string; contains: string[]; mayContain: string[] };
 export type PrivacyRequest = { id: string; type: string; detail: string; status: string };
 export type Audit = { id: string; action: string; target: string; actor: string; detail: string; at: string };
 export type DemoState = {
-  role: Role; profile: { name: string; email: string; phone: string };
+  role: Role; profile: { name: string; email: string; phone: string }; occupiedTables?: string[];
   reservations: Reservation[]; rooms: Room[]; tables: Table[]; blocks: Block[];
   rules: Rules; hours: Hours[]; exceptions: Exception[]; products: ManagedProduct[]; categories: Category[];
   team: Member[]; privacy: PrivacyRequest[]; audit: Audit[];
@@ -67,14 +67,15 @@ export function visitError(state: DemoState, visit: Visit, duration = state.rule
   const exception = state.exceptions.find(item => item.date === visit.date);
   const hours = state.hours.find(item => item.day === new Date(stamp).getUTCDay())!;
   const activeHours = exception ? { open: !exception.closed, ...exception } : hours;
-  const minute = clock(visit.time), end = clock(activeHours.end) + (activeHours.nextDay ? 1440 : 0);
-  if (!activeHours.open || minute < clock(activeHours.start) || minute + duration > end) return 'O período inteiro precisa caber no funcionamento do salão.';
+  const minute = clock(visit.time);
+  const ranges = [activeHours, ...(!exception ? hours.ranges ?? [] : [])];
+  if (!activeHours.open || !ranges.some(range => minute >= clock(range.start) && minute + duration <= clock(range.end) + (range.nextDay ? 1440 : 0))) return 'O período inteiro precisa caber no funcionamento do salão.';
   return null;
 }
 export function availableTable(state: DemoState, visit: Visit, excludeId?: string, duration = state.rules.duration) {
   if (visitError(state, visit, duration)) return undefined;
   const start = startOf(visit), end = start + duration * 60000;
-  return [...state.tables].filter(table => table.active && table.capacity >= visit.partySize && state.rooms.some(room => room.id === table.roomId && room.active)).sort((a, b) => a.capacity - b.capacity || a.code.localeCompare(b.code)).find(table =>
+  return [...state.tables].filter(table => !(state.occupiedTables ?? []).includes(table.id) && table.active && table.capacity >= visit.partySize && state.rooms.some(room => room.id === table.roomId && room.active)).sort((a, b) => a.capacity - b.capacity || a.code.localeCompare(b.code)).find(table =>
     !state.reservations.some(item => item.id !== excludeId && item.tableId === table.id && allocated(item) && overlaps(start, end, startOf(item), item.status === 'CHECK_IN' ? Infinity : startOf(item) + item.duration * 60000)) &&
     !state.blocks.some(block => block.tableId === table.id && overlaps(start, end, startOf({ ...block, partySize: 1 }), Date.parse(`${block.date}T${block.end}:00-03:00`)))
   );
@@ -83,6 +84,8 @@ export function canCancel(reservation: Reservation) {
   return reservation.status === 'PENDING_APPROVAL' || (reservation.status === 'CONFIRMED' && startOf(reservation) >= Date.parse(scenarioNow) + reservation.cancelNotice * 60000);
 }
 export type Command =
+  | { type: 'complete-visit'; id: string }
+  | { type: 'occupancy'; tableIds: string[] }
   | { type: 'role'; role: Role } | { type: 'clear' } | { type: 'reset' }
   | { type: 'reservation'; id: string; action: 'approve' | 'reject' | 'cancel' | 'checkin' | 'no-show' | 'reschedule'; customer?: boolean; reason?: string; visit?: Visit }
   | { type: 'create-reservation'; visit: Visit; notes: string; customer: boolean; name?: string; email?: string; phone?: string }
@@ -103,6 +106,13 @@ export function demoReducer(state: DemoState, command: Command): DemoState {
   const fail = (text: string) => ({ ...state, feedback: { error: true, text, sequence: (state.feedback?.sequence ?? 0) + 1 } });
   const invalid = (scope: string, fields: Record<string, string>) => ({ ...state, feedback: { error: true, text: 'Revise os campos indicados e tente salvar novamente.', sequence: (state.feedback?.sequence ?? 0) + 1, scope, fields } });
   const done = (patch: Partial<DemoState>, action: string, target: string, detail = 'Alteração aplicada apenas na memória desta demonstração.') => ({ ...state, ...patch, feedback: { error: false, text: `${action} na demonstração.`, sequence: (state.feedback?.sequence ?? 0) + 1 }, audit: [...state.audit, { id: `AUD-${state.audit.length + 1}`, action, target, at: scenarioNow, actor: ['profile', 'privacy', 'password'].includes(command.type) || (command.type === 'reservation' && command.customer) || (command.type === 'create-reservation' && command.customer) ? state.profile.name : state.role, detail }] });
+  if (command.type === 'occupancy') return { ...state, occupiedTables: command.tableIds };
+  if (command.type === 'complete-visit') {
+    if (state.role === 'Preparação') return fail('Papel incompatível para encerrar visita.');
+    const item = state.reservations.find(r => r.id === command.id && r.status === 'CHECK_IN');
+    if (!item) return fail('Visita não encontrada ou já encerrada.');
+    return done({ reservations: state.reservations.map(r => r.id === item.id ? { ...r, status: 'COMPLETED', history: [...r.history, 'Comanda quitada; visita concluída.'] } : r) }, 'Visita concluída', item.id);
+  }
   if (command.type === 'profile') {
     const profile = { ...command.profile, name: command.profile.name.trim(), email: command.profile.email.trim().toLowerCase(), phone: command.profile.phone.trim() };
     const fields: Record<string, string> = {};
@@ -194,6 +204,7 @@ export function demoReducer(state: DemoState, command: Command): DemoState {
     return done({ rooms: state.rooms.some(item => item.id === room.id) ? state.rooms.map(item => item.id === room.id ? room : item) : [...state.rooms, room] }, 'Ambiente salvo', room.name);
   }
   if (command.type === 'table') {
+    if ((state.occupiedTables ?? []).includes(command.table.id)) return fail('Resolva a comanda ativa antes de alterar esta mesa.');
     const table = command.table;
     if (!table.code.trim() || !Number.isInteger(table.capacity) || table.capacity < 1 || table.capacity > 20 || !state.rooms.some(room => room.id === table.roomId && room.active) || state.tables.some(item => item.id !== table.id && item.code.toLowerCase() === table.code.toLowerCase())) return fail('Revise código único, capacidade de 1 a 20 e ambiente ativo.');
     const affected = state.reservations.filter(item => allocated(item) && item.tableId === table.id);
@@ -207,6 +218,10 @@ export function demoReducer(state: DemoState, command: Command): DemoState {
     return done({ blocks: [...state.blocks, { ...block, id: `BLOQ-${state.blocks.length + 1}` }] }, 'Bloqueio criado', block.tableId);
   }
   if (command.type === 'hours' || command.type === 'exception') {
+    if (command.type === 'hours' && command.hours.some(day => {
+      const ranges = [day, ...(day.ranges ?? [])];
+      return ranges.some(r => !/^([01]\d|2[0-3]):[0-5]\d$/.test(r.start) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(r.end) || clock(r.end) + (r.nextDay ? 1440 : 0) <= clock(r.start)) || ranges.some((r,i) => ranges.some((b,j) => i !== j && clock(r.start) < clock(b.end) + (b.nextDay ? 1440 : 0) && clock(b.start) < clock(r.end) + (r.nextDay ? 1440 : 0)));
+    })) return fail('As faixas diárias precisam ser válidas e não podem se sobrepor.');
     const schedules = command.type === 'hours' ? command.hours : [command.exception];
     if (schedules.some(item => !/^([01]\d|2[0-3]):[0-5]\d$/.test(item.start) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(item.end) || clock(item.end) + (item.nextDay ? 1440 : 0) <= clock(item.start) || clock(item.end) + (item.nextDay ? 1440 : 0) - clock(item.start) > 1440)) return fail('Revise os intervalos e a indicação de término no dia seguinte.');
     if (command.type === 'exception' && (!/^\d{4}-\d{2}-\d{2}$/.test(command.exception.date) || !command.exception.reason.trim())) return fail('Informe data e motivo da exceção.');

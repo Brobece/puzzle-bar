@@ -44,6 +44,19 @@
 .result > p { color: var(--muted); font-size: 14px; margin: 22px 0; }
 .resultNote { color: #bcbdd0; background: var(--ink); font-size: 12px; padding: 18px; border-radius: 4px; line-height: 1.8; margin-bottom: 24px; }
 .textButton { display: block; background: none; border: 0; color: var(--lavender); font-size: 12px; padding: 14px 0; margin-top: 10px; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.flowIntro { color: var(--muted); font-size: 14px; margin-top: 24px; }
+.flowLinks { display: flex; flex-wrap: wrap; gap: 4px 24px; margin-top: 16px; }
+.flowLinks a { display: inline-flex; align-items: center; min-height: 44px; color: var(--lavender); font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
+.linkNotice { margin-top: 28px; }
+.linkNotice h2 { font-size: 28px; text-wrap: balance; }
+.linkNotice > p { color: var(--muted); font-size: 14px; margin: 16px 0 24px; }
+.preview { border-top: 1px solid var(--divider); margin-top: 24px; font-size: 12px; color: var(--muted); }
+.preview summary { padding: 16px 0; min-height: 44px; cursor: pointer; color: var(--lavender); }
+.preview ul { list-style: none; padding: 0; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.preview a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: 4px; color: var(--lavender); }
+.requestActions { display: flex; flex-wrap: wrap; gap: 0 24px; }
+.submit:disabled, .textButton:disabled { cursor: not-allowed; background: transparent; color: var(--muted); }
+.submit:disabled { border: 1px solid var(--control-border); }
 @media (max-width: 1100px) { .page { width: 88%; } .layout { gap: 6%; } .panel { padding: 24px; } }
 @media (max-width: 800px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 24px; } .record { display: none; } .intro > p { display: none; } }
 @media (max-width: 500px) { .page { width: 86%; } .breadcrumb { padding-top: 24px; } .layout { padding-bottom: 45px; } .intro h1 { font-size: clamp(34px, 9vw, 40px); } .panel { padding: 0; border: 0; background: transparent; } .notice { padding: 12px 14px; } .formHeading { margin: 20px 0 14px; } .formHeading h2 { font-size: 26px; } .result h2 { font-size: 29px; } .result :global(.button) { font-size: 12px; gap: 15px; } }

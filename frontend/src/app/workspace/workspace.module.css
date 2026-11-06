@@ -18,6 +18,7 @@
 .identity strong { font-size: 12px; display: block; overflow-wrap: anywhere; }
 .identity small { color: var(--muted); font-size: 12px; }
 .subtleLink { color: var(--lavender); font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+.sidebar > .subtleLink { display: block; padding: 8px 0; }
 .main { padding: 24px 4% 0; min-width: 0; }
 .demoBar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 15px 22px; align-items: center; border: 1px solid #ffffff20; border-radius: 6px; padding: 15px 18px; background: #191e35; }
 .demoBar > p { flex: 1; min-width: min(100%, 220px); }

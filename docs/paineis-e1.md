@@ -2,7 +2,7 @@
 
 ## Escopo
 
-Interfaces da área do cliente, operação, administração e dados pessoais, seguindo as seções 8, 17–20 do planejamento. Não implementa APIs, autenticação, banco ou operação comercial real. Comandas, preparo, pagamentos, compras online e estoque continuam em E2–E4.
+Interfaces da área do cliente, operação, administração e dados pessoais, seguindo as seções 8, 17–20 do planejamento. Não implementa APIs, autenticação, banco ou operação comercial real. As interfaces demonstrativas de comandas, preparo, pagamentos, compras online e estoque foram implementadas posteriormente; ver `docs/telas-comerciais.md`. O restante deste documento registra a base original da E1.
 
 | Grupo | Rotas implementadas |
 | --- | --- |
@@ -25,7 +25,7 @@ Entrada demonstrativa aponta para `/conta`. Rodapé público e menu móvel dão 
 
 - Visão geral com contagens, próximos encontros e atalhos; lista por período/estado; detalhes somente do cliente fictício, sem mesa interna, com histórico e cancelamento permitido.
 - Perfil com nome, e-mail e telefone opcional validados. Reservas anteriores preservam o contato da solicitação. Alteração de senha é simulada, sem receber senha no reducer nem armazená-la; os campos são limpos ao concluir.
-- Dados pessoais: pedidos locais de acesso, exportação, correção ou exclusão. Correção exige descrição; exclusão exige ciência na interface. Apenas protocolo e histórico na sessão: não exporta, exclui, envia e-mail ou promete prazo. Política pública e canal reais pendentes.
+- Dados pessoais: pedidos locais de acesso, exportação, correção ou exclusão. Correção exige descrição; exclusão exige ciência na interface. Apenas protocolo e histórico na sessão: não exporta, exclui, envia e-mail ou promete prazo. A política pública demonstrativa está em `/privacidade`, com link nesta área e na navegação dos painéis. Política definitiva e canal reais pendentes.
 
 ## Reservas e operação
 

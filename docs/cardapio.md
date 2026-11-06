@@ -2,7 +2,7 @@
 
 ## Referência e escopo
 
-Baseado no planejamento, seções 6.3 (modelo lógico), 17.3 (modelo físico), 8.1 (P03/P04) e 20.1 (publicação e disponibilidade). Páginas de consulta em `/cardapio` e `/cardapio/[slug]`, sem back-end, pedidos ou carrinho. Cada cartão oferece acesso à página individual e uma prévia rápida em diálogo acessível. Produtos, preços, receitas, alergênicos e imagens são exemplos fictícios, explicitados na interface.
+Baseado no planejamento, seções 6.3 (modelo lógico), 17.3 (modelo físico), 8.1 (P03/P04) e 20.1 (publicação e disponibilidade). Páginas de consulta em `/cardapio` e `/cardapio/[slug]`, sem back-end. A ampliação comercial posterior acrescenta carrinho, adicionais e pedidos demonstrativos; ver `docs/telas-comerciais.md`. Este documento registra a base original. Cada cartão oferece acesso à página individual e uma prévia rápida em diálogo acessível. Produtos, preços, receitas, alergênicos e imagens são exemplos fictícios, explicitados na interface.
 
 ## Modelo dos mocks
 

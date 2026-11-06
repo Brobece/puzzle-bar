@@ -1,0 +1,31 @@
+.publicPage { width: min(1120px, 86%); margin: 0 auto; padding-bottom: 64px; }
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 12px 28px; padding-top: 28px; font-size: 14px; color: var(--lavender); }
+.breadcrumb a { min-height: 44px; display: inline-flex; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
+.totals { margin: 24px 0; display: grid; gap: 12px; }
+.totals > div { display: flex; justify-content: space-between; gap: 24px; }
+.totals dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--lavender); font-weight: 600; }
+.item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--divider); }
+.item h3 { font-size: 20px; }
+.item p { color: var(--muted); font-size: 14px; margin-top: 8px; overflow-wrap: anywhere; }
+.item input[type=number] { max-width: 100px; }
+.option { display: flex; gap: 12px; align-items: center; padding: 10px 0; min-height: 44px; font-size: 14px; }
+.option input { width: 20px; height: 20px; accent-color: var(--lavender); }
+.orderControls { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.orderControls > * { max-width: 100%; }
+.queue { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; }
+.lane { border-top: 1px solid var(--control-border); padding-top: 20px; min-width: 0; }
+.lane > h2 { font-size: 23px; margin-bottom: 20px; }
+.ticket { padding: 18px; background: var(--surface); border-radius: 7px; margin-bottom: 16px; }
+.ticket h3 { font-size: 18px; margin: 10px 0; }
+.ticket p { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.ticket small { display: block; color: var(--muted); font-size: 12px; }
+.ticket button { margin-top: 16px; }
+.inlineForm { display: grid; gap: 16px; margin: 20px 0; }
+.links { list-style: none; padding: 0; }
+.links a { display: block; padding: 18px 0; border-bottom: 1px solid var(--divider); color: var(--lavender); }
+.metrics { display: flex; flex-wrap: wrap; gap: 24px 48px; padding: 24px 0; margin-bottom: 24px; border-block: 1px solid var(--divider); }
+.metrics div { min-width: 130px; }
+.metrics dt { font-size: 14px; color: var(--muted); }
+.metrics dd { font: 600 30px var(--font-display); color: var(--lavender); margin: 12px 0 0; font-variant-numeric: tabular-nums; }
+@media(max-width:1100px) { .queue { grid-template-columns: 1fr; } }
+@media(max-width:500px) { .item { grid-template-columns: minmax(0,1fr); } .publicPage { width: 88%; } .metrics { gap: 24px; } }

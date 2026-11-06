@@ -24,7 +24,7 @@ export function SiteFooter() {
   return <footer className="site-footer">
     <Link className="brand" href="/" aria-label="STEREO, início"><StereoMark/>STEREO</Link>
     <p>Eletrohits, encontros e bons momentos.</p>
-    <nav className="footer-links" aria-label="Links úteis"><Link href="/politicas/reservas">Política de reservas</Link><Link href="/conta">Explorar minha conta</Link></nav>
+    <nav className="footer-links" aria-label="Links úteis"><Link href="/politicas/reservas">Política de reservas</Link><Link href="/privacidade">Privacidade</Link><Link href="/politicas/compras">Condições de compra</Link><Link href="/carrinho">Carrinho</Link><Link href="/conta">Explorar minha conta</Link></nav>
     <span>Feito para Aracaju.</span>
   </footer>;
 }

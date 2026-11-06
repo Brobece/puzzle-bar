@@ -1,0 +1,66 @@
+'use client';
+import { useState } from 'react';
+import Link from 'next/link';
+import { useDemo } from '../workspace/provider';
+import { Field, Heading, Panel, Empty, value } from '../workspace/ui';
+import { useCommerce } from './provider';
+import { DataTable, State, Search, match } from './ui';
+import { brl, cents, orderTotal, eligible, paid } from '../../lib/commerce/model';
+import type { Pick, Order } from '../../lib/commerce/model';
+import { customerId } from '../../lib/workspace/model';
+import styles from '../workspace/workspace.module.css';
+import local from './commerce.module.css';
+
+export function ProductPurchase({ productId, add }: { productId: string; add?: (item: Pick) => void }) {
+  const { state: demo } = useDemo(); const { state, act } = useCommerce();
+  const product = demo.products.find(p => p.id === productId);
+  const [quantity, setQuantity] = useState(1); const [options, setOptions] = useState<string[]>([]); const [notes, setNotes] = useState('');
+  if (!product) return <p>Produto não encontrado.</p>;
+  const available = product.active && product.available && demo.categories.find(c => c.id === product.categoryId)?.active;
+  const extras = state.options.filter(o => o.productId === productId && o.active);
+  const unit = cents(product.price) + extras.filter(o => options.includes(o.id)).reduce((sum, o) => sum + o.price, 0);
+  return <form className={local.inlineForm} onSubmit={e => { e.preventDefault(); const item = { productId, quantity, optionIds: options, notes }; if (add) add(item); else act({ type: 'cart-add', item }); }}>
+    {extras.length > 0 && <fieldset className={styles.fieldset}><legend>Adicionais de exemplo ({state.optionRules[productId]?.min ?? 0} a {Math.min(extras.length,state.optionRules[productId]?.max ?? extras.length)} escolhas)</legend>{extras.map(o => <label key={o.id} className={local.option}><input type="checkbox" checked={options.includes(o.id)} onChange={e => setOptions(e.target.checked ? [...options,o.id] : options.filter(id => id !== o.id))}/>{o.name} · {brl(o.price)}</label>)}<p className={styles.hint}>Receita e informações alimentares dos adicionais são ilustrativas; confirme os dados antes do uso real.</p></fieldset>}
+    <Field label="Quantidade"><input type="number" min={1} max={99} required value={quantity} onChange={e => setQuantity(Number(e.target.value))}/></Field>
+    <Field label="Observação (opcional)"><textarea rows={2} maxLength={500} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Use apenas informações fictícias"/></Field>
+    <p>Total estimado: <strong>{brl(Number.isFinite(quantity) ? unit * quantity : 0)}</strong></p>
+    <button className={styles.primary} disabled={!available} type="submit">{available ? add ? 'Adicionar à rodada' : 'Adicionar ao carrinho demonstrativo' : 'Produto indisponível'}</button>
+    {!add && <Link className={styles.subtleLink} href="/carrinho">Ver carrinho ({state.cart.length} itens)</Link>}
+  </form>;
+}
+export function cartPrice(item: Pick, demo: ReturnType<typeof useDemo>['state'], commerce: ReturnType<typeof useCommerce>['state']) {
+  const product = demo.products.find(p => p.id === item.productId);
+  return (product ? cents(product.price) + item.optionIds.reduce((sum, id) => sum + (commerce.options.find(o => o.id === id)?.price ?? 0), 0) : 0) * item.quantity;
+}
+export function CartPage() {
+  const { state: demo } = useDemo(); const { state, act } = useCommerce();
+  return <><Heading title="Seu carrinho" description="Escolha os itens para retirada. Valores demonstrativos, revalidados ao criar o pedido." action={<Link className={styles.secondary} href="/cardapio">Continuar no cardápio</Link>}/>{state.cart.length ? <Panel title={`${state.cart.length} seleção(ões)`}>{state.cart.map((item,index) => <div className={local.item} key={index}><div><h3>{demo.products.find(p => p.id === item.productId)?.name ?? 'Produto indisponível'}</h3><p>{item.optionIds.map(id => state.options.find(o => o.id === id)?.name).join(', ') || 'Sem adicionais'}</p>{item.notes && <p>{item.notes}</p>}<div className={local.orderControls}><Field label={`Quantidade do item ${index+1}`}><input type="number" min={1} max={99} value={item.quantity} onChange={e => act({ type: 'cart-quantity', index, quantity: Number(e.target.value) })}/></Field><button className={styles.secondary} type="button" onClick={() => act({ type: 'cart-quantity', index, quantity: 0 })}>Remover item {index+1}</button></div></div><strong>{brl(cartPrice(item,demo,state))}</strong></div>)}<dl className={local.totals}><div><dt>Subtotal estimado</dt><dd>{brl(state.cart.reduce((sum,i) => sum + cartPrice(i,demo,state),0))}</dd></div><div><dt>Taxa de serviço</dt><dd>Não aplicada</dd></div></dl><Link className={styles.primary} href="/checkout">Revisar retirada</Link></Panel> : <Empty title="Seu carrinho está vazio." text="Explore o cardápio e abra um produto para adicionar itens." href="/cardapio" label="Explorar cardápio"/>}</>;
+}
+export function CheckoutPage() {
+  const { state: demo } = useDemo(); const { state, act } = useCommerce();
+  if (!state.cart.length) return <><Heading title="Revisar retirada" description="Nenhuma cobrança é realizada nesta prévia."/>{state.lastOrder ? <Panel title="Pedido demonstrativo criado"><p>O pedido aguarda pagamento fictício. O retorno do navegador não confirma o recebimento.</p><div className={styles.actions}><Link className={styles.primary} href={`/checkout/retorno?id=${state.lastOrder}`}>Abrir pagamento de exemplo</Link><Link className={styles.secondary} href={`/conta/pedidos/${state.lastOrder}`}>Acompanhar pedido</Link></div></Panel> : <Empty text="Adicione itens antes de revisar a compra." href="/cardapio" label="Ir ao cardápio"/>}</>;
+  return <><Heading title="Revisar retirada" description="Confira os itens e o contato fictício antes de criar o pedido."/><div className={styles.columns}><Panel title="Seu pedido"><DataTable headers={['Item','Quantidade','Estimativa']} rows={state.cart.map(i => [demo.products.find(p => p.id === i.productId)?.name,i.quantity,brl(cartPrice(i,demo,state))])}/><dl className={local.totals}><div><dt>Total estimado</dt><dd>{brl(state.cart.reduce((sum,i) => sum+cartPrice(i,demo,state),0))}</dd></div></dl><div className={styles.actions}><Link className={styles.subtleLink} href="/carrinho">Editar carrinho</Link><button className={styles.secondary} type="button" onClick={()=>act({type:'requote'})}>Atualizar orçamento</button></div></Panel><Panel title="Retirada e contato"><p>Retirada imediata no bar, dentro do horário habilitado no cenário. Sem delivery ou agendamento.</p><form className={styles.form} onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); act({ type: 'checkout', contact: value(data,'contact'), accepted: data.has('accepted') }); }}><Field label="Nome para retirada (fictício)"><input name="contact" required minLength={2} maxLength={120} defaultValue={demo.profile.name}/></Field><p><Link className={styles.subtleLink} href="/politicas/compras">Ler condições demonstrativas da compra</Link></p><label className={local.option}><input type="checkbox" name="accepted" required/>Entendi as condições e que esta compra é apenas uma demonstração.</label><button className={styles.primary} type="submit">Criar pedido demonstrativo</button></form></Panel></div></>;
+}
+export function PaymentReturn({ id }: { id?: string }) {
+  const { state, act } = useCommerce(); const order = state.orders.find(o => o.id === (id ?? state.lastOrder ?? 'PED-002') && o.customerId === customerId && !o.tabId); const p = state.payments.find(p => p.account === order?.id);
+  if (!order || !p) return <><Heading title="Pagamento não encontrado" description="Consulte seus pedidos para continuar."/><Empty text="Este pedido não está disponível para o cliente demonstrativo." href="/conta/pedidos"/></>;
+  return <><Heading title="Situação do pagamento" description="O resultado abaixo vem do cenário compartilhado, não de um provedor real."/><Panel title={order.id}><State>{p.status}</State><dl className={local.totals}><div><dt>Valor</dt><dd>{brl(p.amount)}</dd></div><div><dt>Referência</dt><dd>{p.id}</dd></div></dl><p>{p.status === 'CONFIRMADO' ? 'Pagamento fictício confirmado; pedido liberado para preparação.' : 'A preparação depende da confirmação. Você pode simular os resultados abaixo sem informar dados financeiros.'}</p>{p.status !== 'CONFIRMADO' && order.status !== 'CANCELADO' && <div className={styles.actions}>{(['CONFIRMADO','PENDENTE','FALHOU','EXPIRADO'] as const).map(result => <button className={styles.secondary} type="button" key={result} onClick={() => act({ type: 'payment-result', id: p.id, result })}>Simular {result.toLowerCase()}</button>)}</div>}<div className={styles.actions}><Link className={styles.primary} href={`/conta/pedidos/${order.id}`}>Acompanhar pedido</Link><Link className={styles.secondary} href="/cardapio">Voltar ao cardápio</Link></div></Panel></>;
+}
+export function OrderLines({ order }: { order: Order }) {
+  return <DataTable headers={['Item','Quantidade','Situação','Total']} rows={order.lines.map(l => [<div key={l.id}>{l.name}<small>{l.options.join(', ')}{l.notes && ` · ${l.notes}`}</small></div>,l.quantity,<State key="status">{l.status}</State>,brl(l.status === 'CANCELADO' ? 0 : l.unitPrice*l.quantity)])}/>;
+}
+export function CustomerOrders() {
+  const { state } = useCommerce(); const [query,setQuery]=useState(''); const [status,setStatus]=useState('');
+  const orders=state.orders.filter(o => o.customerId === customerId && !o.tabId && match(o.id,query) && (!status || o.status === status));
+  return <><Heading title="Meus pedidos" description="Histórico das compras fictícias para retirada." action={<Link href="/cardapio" className={styles.primary}>Explorar cardápio</Link>}/><Search query={query} setQuery={setQuery} state={status} setState={setStatus} states={['AGUARDANDO_PAGAMENTO','CONFIRMADO','EM_PREPARO','PRONTO','ENTREGUE','CANCELADO']}/><Panel title="Compras para retirada"><DataTable headers={['Pedido','Situação','Total','Detalhes']} rows={orders.map(o => [o.id,<State key="status">{o.status}</State>,brl(orderTotal(o)),<Link key="link" className={styles.subtleLink} href={`/conta/pedidos/${o.id}`}>Abrir pedido</Link>])}/></Panel></>;
+}
+export function CustomerOrder({ id }: { id: string }) {
+  const { state, act } = useCommerce(); const order = state.orders.find(o => o.id === id && o.customerId === customerId && !o.tabId);
+  if (!order) return <><Heading title="Pedido não encontrado" description="Este pedido não está disponível para este perfil."/><Empty text="Consulte seu histórico." href="/conta/pedidos"/></>;
+  const payment = state.payments.find(p => p.account === id);
+  return <><Heading title={order.id} description="Acompanhe preparo, retirada e situação financeira." action={<Link href="/conta/pedidos" className={styles.secondary}>Meus pedidos</Link>}/><div className={styles.columns}><Panel title="Itens e preparo"><State>{order.status}</State><OrderLines order={order}/><dl className={local.totals}><div><dt>Total dos itens</dt><dd>{brl(orderTotal(order))}</dd></div><div><dt>Retirada</dt><dd>{order.code}</dd></div></dl><p>Apresente o código à equipe quando o pedido estiver pronto. Os dados são apenas exemplos.</p>{paid(state,id) === 0 && order.status !== 'CANCELADO' && <div className={styles.actions}><Link className={styles.primary} href={`/checkout/retorno?id=${id}`}>Ver pagamento</Link><form onSubmit={e => { e.preventDefault(); act({ type: 'cancel-order', id, reason: value(new FormData(e.currentTarget),'reason'), own: true }); }}><Field label="Motivo do cancelamento"><input name="reason" required maxLength={240}/></Field><button className={styles.danger}>Cancelar pedido demonstrativo</button></form></div>}{paid(state,id)>0 && <p className={styles.note}>Cancelamento após pagamento depende de avaliação da equipe. O canal real ainda será definido. Cancelamento e estorno são processos distintos.</p>}</Panel><div><Panel title="Pagamento e devoluções"><p>{payment ? `${payment.id}: ${payment.status.toLowerCase()}` : 'Sem pagamento registrado.'}</p>{payment && <><p>Valor confirmado: {brl(paid(state,id))}</p><p>Disponível para avaliação de estorno: {brl(eligible(state,payment.id))}</p><ul className={styles.history}>{state.refunds.filter(r => r.paymentId === payment.id).map(r => <li key={r.id}>{r.id} · {brl(r.amount)} · {r.status.toLowerCase()}<br/>{r.reason}</li>)}</ul></>}</Panel><Panel title="Histórico"><ol className={styles.history}>{order.history.map((text,i) => <li key={i}>{text}</li>)}</ol></Panel></div></div></>;
+}
+export function CustomerOrderPreview() {
+  const { state }=useCommerce(); const orders=state.orders.filter(o => o.customerId === customerId && !o.tabId && !['ENTREGUE','CANCELADO'].includes(o.status));
+  return <Panel title="Pedidos para retirada">{orders.length ? <ul className={local.links}>{orders.map(o => <li key={o.id}><Link href={`/conta/pedidos/${o.id}`}>{o.id} · {o.status.replaceAll('_',' ').toLowerCase()}</Link></li>)}</ul> : <p>Nenhum pedido ativo.</p>}<div className={styles.actions}><Link className={styles.secondary} href="/conta/pedidos">Histórico de pedidos</Link><Link className={styles.secondary} href="/carrinho">Meu carrinho</Link></div></Panel>;
+}

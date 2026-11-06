@@ -3,7 +3,7 @@
 - **Versão:** 1.3 — Reservas com solicitação e aprovação manual da equipe.
 - **Data:** 28/10/2026.
 - **Entrega atual:** planejamento documentado e projetos-base de front-end/back-end criados; home e página Sobre institucionais implementadas; cardápio público com dados mockados, prévia em diálogo e página individual de produto; Visite e solicitação de mesa com acesso/análise demonstrativos locais; política demonstrativa de reservas com links no fluxo e rodapé; painéis de cliente, operação, gestão e dados pessoais com cenário compartilhado em memória (ver `docs/paineis-e1.md`); integrações e autenticação reais pendentes.
-- **Estado:** E1 em implementação de interfaces com dados demonstrativos, incluindo cadastro e entrada (A01/A02); autenticação, integrações e regras no servidor ainda pendentes. Ver `docs/cadastro-acesso.md` para critérios e limites das telas de acesso.
+- **Estado:** Interfaces comerciais de E2–E4 e ampliações dos painéis implementadas em caráter demonstrativo; inventário das 26 novas páginas em `docs/telas-comerciais.md`. Interfaces-base da E1 implementadas com dados demonstrativos, incluindo acesso A01–A05 e privacidade pública P08. Autenticação, integrações, persistência, estados de rede/sessão e regras no servidor ainda pendentes. Ver `docs/cadastro-acesso.md` e `docs/acesso-e-privacidade-e1.md` para critérios, estados e limites das telas de acesso e privacidade. Isto não conclui os critérios funcionais da E1.
 
 ## 1. Visão do produto
 

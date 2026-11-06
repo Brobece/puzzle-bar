@@ -1,0 +1,4 @@
+.reading { max-width: 72ch; }
+.reading.reading section > p, .reading.reading li { font-size: 16px; }
+.reading a { color: var(--lavender); text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 500px) { .reading.reading section > p, .reading.reading li { font-size: 14px; } }

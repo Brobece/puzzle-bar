@@ -2,7 +2,7 @@
 
 ## Referência
 
-Implementa as interfaces A01 (`/entrar`) e A02 (`/cadastro`) do planejamento, seções 8.1, 17.3, 18.2 e 20.1. A documentação já define nome, e-mail, telefone opcional e senha no cadastro; entrada por e-mail e senha. O e-mail permanece como identificador, não o nome ou telefone. Cadastro público definitivo terá apenas papel CLIENT e verificação de e-mail.
+Implementa as interfaces A01–A05 (`/entrar`, `/cadastro`, `/verificar-email`, `/recuperar-senha` e `/redefinir-senha`) do planejamento, seções 8.1, 17.3, 18.2 e 20.1. A documentação já define nome, e-mail, telefone opcional e senha no cadastro; entrada por e-mail e senha. O e-mail permanece como identificador, não o nome ou telefone. Cadastro público definitivo terá apenas papel CLIENT e verificação de e-mail. As quatro páginas finais da E1, incluindo P08, estão detalhadas em `docs/acesso-e-privacidade-e1.md`.
 
 ## Interfaces
 
@@ -17,7 +17,7 @@ Componentes compartilhados `auth-shell.tsx`, `auth-form.tsx` e `auth.module.css`
 
 ## Integrações pendentes
 
-Spring Security, banco, unicidade de e-mail, hash de senha, cookies de sessão, CSRF, limites de tentativas, papéis e verificação de e-mail. Cadastro não cadastra credenciais para a entrada simulada; ela usa apenas a conta fictícia publicada. As páginas de verificação, recuperação e redefinição de senha permanecem pendentes, sem links quebrados para essas rotas. A reserva e os painéis usam o perfil fictício compartilhado; os dados digitados no cadastro/entrada não substituem esse perfil nem criam autenticação.
+Spring Security, banco, unicidade de e-mail, hash de senha, cookies de sessão, CSRF, limites de tentativas, papéis e verificação de e-mail reais. Cadastro não cadastra credenciais para a entrada simulada; ela usa apenas a conta fictícia publicada. As páginas de verificação, recuperação e redefinição estão implementadas como simulações locais, sem envio nem consumo real de tokens. O cadastro leva à verificação; a entrada oferece recuperação e confirmação de e-mail. A reserva e os painéis usam o perfil fictício compartilhado; os dados digitados no cadastro/entrada não substituem esse perfil nem criam autenticação.
 
 ## Validação
 
